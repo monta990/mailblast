@@ -8,7 +8,7 @@
   <strong>GLPI plugin — Send bulk HTML emails to all registered users</strong>
 </p>
 
-p align="center">
+<p align="center">
   <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility"></a>
   <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v2%2B-green?style=flat-square" alt="License"></a>
   <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP"></a>
@@ -169,6 +169,12 @@ Report bugs or request features on the [issue tracker](https://github.com/monta9
   <strong>Plugin para GLPI — Envío masivo de correos HTML a todos los usuarios registrados</strong>
 </p>
 
+<p align="center">
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility"></a>
+  <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v2%2B-green?style=flat-square" alt="License"></a>
+  <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP"></a>
+</p>
+
 ---
 
 ## Descripción general
@@ -177,7 +183,6 @@ Report bugs or request features on the [issue tracker](https://github.com/monta9
 
 Sin servicios externos. Sin tareas cron. Sin dependencias adicionales más allá del propio GLPI.
 
-> **Requiere GLPI 11.0 o superior.**
 
 ---
 
