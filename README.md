@@ -287,7 +287,7 @@ En ningún momento un archivo toca `glpi_documents`, `glpi_configs` ni ningún a
 
 ---
 
-## Changelog
+## Cambios
 
 Ver [CHANGELOG.md](CHANGELOG.md).
 
