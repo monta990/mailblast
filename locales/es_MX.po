@@ -168,3 +168,36 @@ msgstr "Error de inicialización"
 
 msgid "Missing send_id"
 msgstr "Falta el ID de envío"
+
+msgid "You are about to send an email to"
+msgstr "Estás a punto de enviar un correo a"
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr "Esta acción no se puede deshacer. Cada destinatario recibirá un correo."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Yes, send now"
+msgstr "Sí, enviar ahora"
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr "Cancelar el envío? Los correos ya enviados no se podrán recuperar."
+
+msgid "Cancelling…"
+msgstr "Cancelando…"
+
+msgid "Sending cancelled."
+msgstr "Envío cancelado."
+
+msgid "Bad server response"
+msgstr "Respuesta inválida del servidor"
+
+msgid "Server error"
+msgstr "Error del servidor"
+
+msgid "Could not start sending"
+msgstr "No se pudo iniciar el envío"
+
+msgid "Batch failed"
+msgstr "Fallo en el lote"

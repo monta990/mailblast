@@ -168,3 +168,36 @@ msgstr "Initialization error"
 
 msgid "Missing send_id"
 msgstr "Missing send_id"
+
+msgid "You are about to send an email to"
+msgstr "You are about to send an email to"
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr "This action cannot be undone. Each recipient will receive one email."
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Yes, send now"
+msgstr "Yes, send now"
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr "Cancel sending? Emails already sent will not be recalled."
+
+msgid "Cancelling…"
+msgstr "Cancelling…"
+
+msgid "Sending cancelled."
+msgstr "Sending cancelled."
+
+msgid "Bad server response"
+msgstr "Bad server response"
+
+msgid "Server error"
+msgstr "Server error"
+
+msgid "Could not start sending"
+msgstr "Could not start sending"
+
+msgid "Batch failed"
+msgstr "Batch failed"

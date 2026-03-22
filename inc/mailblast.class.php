@@ -101,23 +101,7 @@ class PluginMailblastMailblast extends CommonGLPI
 
     public static function countActiveUsersWithEmail(): int
     {
-        global $DB;
-
-        $iterator = $DB->request([
-            'COUNT'     => 'cpt',
-            'FROM'      => 'glpi_useremails AS ue',
-            'LEFT JOIN' => [
-                'glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']],
-            ],
-            'WHERE' => [
-                'ue.is_default' => 1,
-                'u.is_deleted'  => 0,
-                'u.is_active'   => 1,
-                'NOT'           => ['ue.email' => ''],
-            ],
-        ]);
-
-        return (int) ($iterator->current()['cpt'] ?? 0);
+        return count(self::getActiveUsersWithEmail());
     }
 
     // ─── GLPI allowed document types ─────────────────────────────────────

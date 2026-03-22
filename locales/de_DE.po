@@ -168,3 +168,36 @@ msgstr "Initialisierungsfehler"
 
 msgid "Missing send_id"
 msgstr "Sende-ID fehlt"
+
+msgid "You are about to send an email to"
+msgstr "Sie sind dabei, eine E-Mail zu senden an"
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr "Diese Aktion kann nicht rückgängig gemacht werden. Jeder Empfänger erhält eine E-Mail."
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "Yes, send now"
+msgstr "Ja, jetzt senden"
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr "Senden abbrechen? Bereits gesendete E-Mails können nicht zurückgerufen werden."
+
+msgid "Cancelling…"
+msgstr "Abbrechen…"
+
+msgid "Sending cancelled."
+msgstr "Senden abgebrochen."
+
+msgid "Bad server response"
+msgstr "Ungültige Serverantwort"
+
+msgid "Server error"
+msgstr "Serverfehler"
+
+msgid "Could not start sending"
+msgstr "Senden konnte nicht gestartet werden"
+
+msgid "Batch failed"
+msgstr "Stapel fehlgeschlagen"

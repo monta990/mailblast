@@ -168,3 +168,36 @@ msgstr "Erreur d'initialisation"
 
 msgid "Missing send_id"
 msgstr "Identifiant d'envoi manquant"
+
+msgid "You are about to send an email to"
+msgstr "Vous êtes sur le point d'envoyer un e-mail à"
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr "Cette action est irréversible. Chaque destinataire recevra un e-mail."
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Yes, send now"
+msgstr "Oui, envoyer maintenant"
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr "Annuler l'envoi ? Les e-mails déjà envoyés ne pourront pas être rappelés."
+
+msgid "Cancelling…"
+msgstr "Annulation…"
+
+msgid "Sending cancelled."
+msgstr "Envoi annulé."
+
+msgid "Bad server response"
+msgstr "Réponse invalide du serveur"
+
+msgid "Server error"
+msgstr "Erreur du serveur"
+
+msgid "Could not start sending"
+msgstr "Impossible de démarrer l'envoi"
+
+msgid "Batch failed"
+msgstr "Échec du lot"

@@ -112,14 +112,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ob_start();
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
-        $attachments = [];
-        if (!empty($_FILES['attachments']['name'][0])) {
-            $docTypes    = PluginMailblastMailblast::getAllowedDocumentTypes();
-            $result      = PluginMailblastMailblast::validateUploadedFiles($_FILES['attachments'], $docTypes['mimes']);
-            $attachments = $result['accepted'];
+        // Decode base64 attachments from JS RAM into per-request temp files.
+        // Attachments travel as base64 JSON (same pattern as test_send),
+        // never via $_FILES — avoids browser issues with DataTransfer file inputs.
+        $attRaw  = (string) ($_POST['attachments_b64'] ?? '');
+        $attB64  = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
+        $tmpAtts = [];
+        foreach ($attB64 as $att) {
+            $bytes = base64_decode($att['data'] ?? '', true);
+            if ($bytes === false || $bytes === '') continue;
+            $tmp = @tempnam(sys_get_temp_dir(), 'mb_qi_');
+            if ($tmp !== false && @file_put_contents($tmp, $bytes) !== false) {
+                $tmpAtts[] = ['tmp' => $tmp, 'name' => $att['name'], 'mime' => $att['mime']];
+            }
         }
 
-        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $attachments);
+        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts);
+
+        foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
+
         ob_end_clean();
         header('Content-Type: application/json');
         echo json_encode([
@@ -129,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'html'            => $init['html'],
             'plain'           => $init['plain'],
             'attachments_b64' => $init['attachments_b64'],
+            'csrf'            => Session::getNewCSRFToken(),
         ]);
         exit;
     }
@@ -157,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, 15);
+        $result['csrf'] = Session::getNewCSRFToken();
         ob_end_clean();
         header('Content-Type: application/json');
         echo json_encode(['ok' => true] + $result);
@@ -294,7 +307,7 @@ $savedForm  = PluginMailblastMailblast::loadFormConfig();
 $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
 ?>
-<div class="container-fluid container-xl">
+<div class="container-fluid">
   <div class="card mb-4">
 
     <div class="card-header">
@@ -312,6 +325,9 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
         enctype="multipart/form-data"
       >
         <?php echo Html::hidden('_glpi_csrf_token', ['value' => Session::getNewCSRFToken()]); ?>
+
+        <!-- Inline validation message — replaces native alert() -->
+        <div id="mb_formAlert" class="alert alert-danger py-2 mb-3" style="display:none" role="alert"></div>
 
         <!-- ── Compose ─────────────────────────────────────────────────── -->
         <h4 class="mb-3">
@@ -422,7 +438,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
             <span style="background:#2fb344;color:#fff;padding:.15rem .45rem;border-radius:20px;font-size:.75rem;font-weight:700;margin-left:.25rem"><?php echo count($docTypes['types']); ?></span>
           </a>
           <div class="collapse mt-2" id="mb_allowedTypes">
-            <div class="card card-body py-2" style="max-height:180px;overflow-y:auto">
+            <div class="border rounded p-2" style="max-height:180px;overflow-y:auto">
               <div class="row row-cols-2 row-cols-md-4 g-1">
                 <?php foreach ($docTypes['types'] as $t): ?>
                   <div class="col">
@@ -564,31 +580,59 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
         <?php endif; ?>
 
         <button
-          type="submit"
-          name="action"
-          value="send_all"
+          type="button"
           class="btn btn-danger"
           id="mb_sendAll"
           <?php echo $userCount === 0 ? 'disabled' : ''; ?>
         >
           <i class="ti ti-mail-forward me-1"></i>
           <?php echo __('Send to all users', 'mailblast'); ?>
-          <?php if ($userCount > 0): ?>
-            <span class="badge bg-white text-danger ms-1"><?php echo $userCount; ?></span>
-          <?php endif; ?>
         </button>
 
 
+        <!-- ── Confirmation modal ───────────────────────────────────────── -->
+        <div class="modal fade" id="mb_confirmModal" tabindex="-1"
+             data-bs-backdrop="static" data-bs-keyboard="false"
+             aria-labelledby="mb_confirmLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="mb_confirmLabel">
+                  <i class="ti ti-mail-forward me-2 text-danger"></i>
+                  <?php echo __('Send to all users', 'mailblast'); ?>
+                </h5>
+              </div>
+              <div class="modal-body">
+                <p class="mb-2"><?php echo __('You are about to send an email to', 'mailblast'); ?>:</p>
+                <div class="d-flex align-items-center gap-3 p-3 rounded border">
+                  <i class="ti ti-users fs-1 text-danger flex-shrink-0"></i>
+                  <div>
+                    <div class="fw-bold fs-3 lh-1" id="mb_confirmCount"><?php echo $userCount; ?></div>
+                    <div class="text-muted small mt-1"><?php echo __('Active users with registered email', 'mailblast'); ?></div>
+                  </div>
+                </div>
+                <p class="mt-3 mb-0 text-muted small">
+                  <i class="ti ti-info-circle me-1"></i>
+                  <?php echo __('This action cannot be undone. Each recipient will receive one email.', 'mailblast'); ?>
+                </p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  <?php echo __('Cancel', 'mailblast'); ?>
+                </button>
+                <button type="button" class="btn btn-danger" id="mb_confirmSend">
+                  <i class="ti ti-send me-1"></i>
+                  <?php echo __('Yes, send now', 'mailblast'); ?>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ── Progress modal (shown during mass-send) ────────────────── -->
-        <div
-          class="modal fade"
-          id="mb_progressModal"
-          tabindex="-1"
-          data-bs-backdrop="static"
-          data-bs-keyboard="false"
-          aria-labelledby="mb_progressLabel"
-          aria-hidden="true"
-        >
+        <div class="modal fade" id="mb_progressModal" tabindex="-1"
+             data-bs-backdrop="static" data-bs-keyboard="false"
+             aria-labelledby="mb_progressLabel" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
               <div class="modal-header">
@@ -599,37 +643,38 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
               </div>
               <div class="modal-body">
 
-                <!-- Counters row -->
-                <div class="d-flex justify-content-between mb-1">
+                <!-- Status line -->
+                <div id="mb_statusLine" class="alert alert-info py-2 small mb-3" style="display:none"></div>
+
+                <!-- Sending X of Y label -->
+                <div class="d-flex justify-content-between align-items-center mb-1">
                   <span class="text-muted small"><?php echo __('Progress', 'mailblast'); ?></span>
-                  <span class="small fw-semibold" id="mb_progressLabel2">0 / 0</span>
+                  <span class="small fw-bold" id="mb_progressLabel2">0 / 0</span>
                 </div>
 
                 <!-- Progress bar -->
-                <div class="progress mb-3" style="height:18px">
+                <div class="progress mb-3" style="height:22px;border-radius:6px">
                   <div
                     id="mb_progressBar"
-                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    class="progress-bar progress-bar-striped progress-bar-animated fw-semibold"
                     role="progressbar"
-                    style="width:0%"
-                    aria-valuenow="0"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                  ></div>
+                    style="width:0%;font-size:.8rem"
+                    aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                  >0%</div>
                 </div>
 
-                <!-- Live stats -->
+                <!-- Live counters -->
                 <div class="row text-center g-2 mb-3">
                   <div class="col-4">
-                    <div class="text-success fw-bold fs-4" id="mb_countSent">0</div>
+                    <div class="text-success fw-bold fs-3" id="mb_countSent">0</div>
                     <div class="text-muted small"><?php echo __('Sent', 'mailblast'); ?></div>
                   </div>
                   <div class="col-4">
-                    <div class="text-danger fw-bold fs-4" id="mb_countError">0</div>
+                    <div class="text-danger fw-bold fs-3" id="mb_countError">0</div>
                     <div class="text-muted small"><?php echo __('Errors', 'mailblast'); ?></div>
                   </div>
                   <div class="col-4">
-                    <div class="text-warning fw-bold fs-4" id="mb_countPending">0</div>
+                    <div class="text-warning fw-bold fs-3" id="mb_countPending">0</div>
                     <div class="text-muted small"><?php echo __('Pending', 'mailblast'); ?></div>
                   </div>
                 </div>
@@ -641,19 +686,29 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
                   <span id="mb_elapsed">0s</span>
                 </div>
 
-                <!-- Error list (shown inline as they appear) -->
+                <!-- Status line (info / warning / danger) -->
+                <div id="mb_statusLine" class="alert py-2 small mb-3" style="display:none"></div>
+
+                <!-- Per-address errors -->
                 <div id="mb_errorSection" style="display:none">
                   <hr class="my-2">
                   <p class="text-danger small fw-semibold mb-1">
                     <i class="ti ti-alert-triangle me-1"></i>
                     <?php echo __('Failed addresses', 'mailblast'); ?>
                   </p>
-                  <ul id="mb_errorList" class="list-unstyled small text-danger mb-0" style="max-height:120px;overflow-y:auto"></ul>
+                  <ul id="mb_errorList" class="list-unstyled small text-danger mb-0"
+                      style="max-height:120px;overflow-y:auto"></ul>
                 </div>
 
               </div>
-              <div class="modal-footer" id="mb_progressFooter" style="display:none">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="mb_closeProgress">
+              <div class="modal-footer">
+                <!-- Cancel button — visible while sending, hidden after finish -->
+                <button type="button" class="btn btn-outline-danger" id="mb_cancelSend">
+                  <i class="ti ti-x me-1"></i>
+                  <?php echo __('Cancel', 'mailblast'); ?>
+                </button>
+                <!-- Close button — hidden while sending, shown after finish -->
+                <button type="button" class="btn btn-primary d-none" id="mb_closeProgress" data-bs-dismiss="modal">
                   <?php echo __('Close', 'mailblast'); ?>
                 </button>
               </div>
@@ -681,7 +736,6 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
   padding: .25rem .45rem;
   border-radius: var(--tblr-border-radius-sm, 4px);
   font-size: .75rem;
-  background-color: var(--tblr-bg-surface-secondary, var(--tblr-gray-100));
   color: var(--tblr-body-color);
   border: 1px solid var(--tblr-border-color);
   line-height: 1.3;
@@ -741,6 +795,12 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
     megabytes:       <?php echo json_encode(__('MB',                        'mailblast')); ?>,
     networkError:    <?php echo json_encode(__('Network error',              'mailblast')); ?>,
     jsInitError:     <?php echo json_encode(__('Initialization error',       'mailblast')); ?>,
+    cancelling:      <?php echo json_encode(__('Cancelling…',           'mailblast')); ?>,
+    cancelConfirm:   <?php echo json_encode(__('Cancel sending? Emails already sent will not be recalled.', 'mailblast')); ?>,
+    badResponse:     <?php echo json_encode(__('Bad server response',    'mailblast')); ?>,
+    serverError:     <?php echo json_encode(__('Server error',           'mailblast')); ?>,
+    queueInitFail:   <?php echo json_encode(__('Could not start sending','mailblast')); ?>,
+    queueBatchFail:  <?php echo json_encode(__('Batch failed',           'mailblast')); ?>,
   };
 
   // ── File management ────────────────────────────────────────────────────
@@ -864,141 +924,335 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
   });
 
 
-  // ── Mass-send: AJAX queue driver ──────────────────────────────────────
-  document.getElementById('mb_sendAll')?.addEventListener('click', function (e) {
-    e.preventDefault();
+  // ── Mass-send: validate → confirmation modal → progress modal ────────
+  (function () {
+    'use strict';
 
-    const subject = document.getElementById('mb_subject')?.value.trim();
-    const bodyContent = (typeof tinymce !== 'undefined' && tinymce.editors.length)
-      ? tinymce.editors[0].getContent({ format: 'text' }).trim()
-      : '';
+    var _confirmModal  = null;
+    var _progressModal = null;
+    var _cancelBound   = false;   // cancel listener added only once
+    var _cancelled     = false;
+    var _ticker        = null;
 
-    if (!subject) { alert(i18n.subjectRequired); return; }
-    if (!bodyContent) { alert(i18n.bodyRequired); return; }
-    if (!confirm(i18n.confirmSend)) return;
-
-    // Clear sessionStorage — server persists from here
-    try {
-      sessionStorage.removeItem('mb_subject');
-      sessionStorage.removeItem('mb_body');
-      sessionStorage.removeItem('mb_footer');
-    } catch(_) {}
-
-    const form     = document.getElementById('mb_sendForm');
-    const modal    = new bootstrap.Modal(document.getElementById('mb_progressModal'));
-    const bar      = document.getElementById('mb_progressBar');
-    const label    = document.getElementById('mb_progressLabel2');
-    const elSent   = document.getElementById('mb_countSent');
-    const elErr    = document.getElementById('mb_countError');
-    const elPend   = document.getElementById('mb_countPending');
-    const elElap   = document.getElementById('mb_elapsed');
-    const errSect  = document.getElementById('mb_errorSection');
-    const errList  = document.getElementById('mb_errorList');
-    const footer   = document.getElementById('mb_progressFooter');
-
-    let totalSent = 0, totalErrors = 0, total = 0;
-    const startTime = Date.now();
-
-    // Ticker for elapsed time
-    const ticker = setInterval(() => {
-      const s = Math.floor((Date.now() - startTime) / 1000);
-      elElap.textContent = s + 's';
-    }, 1000);
-
-    function updateBar(processed) {
-      const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
-      bar.style.width = pct + '%';
-      bar.setAttribute('aria-valuenow', pct);
-      label.textContent = processed + ' / ' + total;
-      elSent.textContent  = totalSent;
-      elErr.textContent   = totalErrors;
-      elPend.textContent  = Math.max(0, total - processed);
-    }
-
-    function addErrors(list) {
-      if (!list || !list.length) return;
-      errSect.style.display = '';
-      list.forEach(msg => {
-        const li = document.createElement('li');
-        li.textContent = msg;
-        errList.appendChild(li);
-      });
-    }
-
-    function finish() {
-      clearInterval(ticker);
-      bar.classList.remove('progress-bar-animated', 'progress-bar-striped');
-      bar.classList.add(totalErrors > 0 ? 'bg-warning' : 'bg-success');
-      footer.style.display = '';
-      const s = Math.floor((Date.now() - startTime) / 1000);
-      elElap.textContent = s + 's';
-    }
-
-    // html, plain and attachments_b64 are stored in JS RAM after queue_init
-    // and re-posted with every queue_process call — nothing persists on the server.
-    let _qHtml = '', _qPlain = '', _qAttB64 = [];
-
-    function _getFormCsrf() {
+    function $$(id) { return document.getElementById(id); }
+    function csrfToken() { var el = document.querySelector('input[name="_glpi_csrf_token"]'); return el ? el.value : ''; }
+    function updateCsrf(token) {
+      if (!token) return;
       var el = document.querySelector('input[name="_glpi_csrf_token"]');
-      return el ? el.value : '';
+      if (el) el.value = token;
     }
 
-    function processNext(sendId, offset) {
-      const fd = new FormData();
-      fd.append('_glpi_csrf_token', _getFormCsrf());
-      fd.append('action',          'queue_process');
-      fd.append('send_id',         sendId);
-      fd.append('offset',          offset);
-      fd.append('html',            _qHtml);
-      fd.append('plain',           _qPlain);
-      fd.append('attachments_b64', JSON.stringify(_qAttB64));
+    function showFormAlert(msg) {
+      var el = $$('mb_formAlert');
+      if (!el) { return; }
+      el.textContent = msg;
+      el.style.display = '';
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function hideFormAlert() {
+      var el = $$('mb_formAlert'); if (el) el.style.display = 'none';
+    }
 
-      fetch(<?php echo json_encode($formAction); ?>, { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(data => {
-          if (!data.ok) { finish(); return; }
-          totalSent   += data.sent;
-          totalErrors += data.errors;
-          const processed = Math.min(data.next_offset, total);
-          updateBar(processed);
-          addErrors(data.error_list || []);
-          if (data.done) {
-            // Release memory — no longer needed
-            _qHtml = ''; _qPlain = ''; _qAttB64 = [];
+    // ── helpers ──────────────────────────────────────────────────────────
+
+    function setStatus(msg, type) {
+      var sl = $$('mb_statusLine');
+      if (!sl) return;
+      if (!msg) { sl.style.display = 'none'; return; }
+      sl.className   = 'alert py-2 small mb-3 alert-' + (type || 'info');
+      sl.textContent = msg;
+      sl.style.display = '';
+    }
+
+    function setCounters(sent, errors, pending) {
+      var eS = $$('mb_countSent');  if (eS) eS.textContent = sent;
+      var eE = $$('mb_countError'); if (eE) eE.textContent = errors;
+      var eP = $$('mb_countPending'); if (eP) eP.textContent = pending;
+    }
+
+    function setBar(pct) {
+      var b = $$('mb_progressBar');
+      if (!b) return;
+      b.style.width = pct + '%';
+      b.textContent = pct + '%';
+      b.setAttribute('aria-valuenow', pct);
+    }
+
+    function addErrorItem(msg) {
+      var es = $$('mb_errorSection');
+      var el = $$('mb_errorList');
+      if (es) es.style.display = '';
+      if (el) { var li = document.createElement('li'); li.textContent = msg; el.appendChild(li); }
+    }
+
+    // ── finish: stop ticker, swap buttons, colour bar ────────────────────
+
+    function finish(errMsg) {
+      if (_ticker) { clearInterval(_ticker); _ticker = null; }
+
+      // Swap Cancel → Close
+      var cb = $$('mb_cancelSend');
+      var cl = $$('mb_closeProgress');
+      if (cb) cb.classList.add('d-none');
+      if (cl) cl.classList.remove('d-none');
+
+      // Colour bar
+      var b = $$('mb_progressBar');
+      if (b) {
+        b.classList.remove('progress-bar-animated', 'progress-bar-striped');
+        if (_cancelled)         b.classList.add('bg-secondary');
+        else if (errMsg)        b.classList.add('bg-danger');
+        else                    b.classList.add('bg-success');
+      }
+
+      if (errMsg)    addErrorItem(errMsg);
+      if (_cancelled) setStatus(<?php echo json_encode(__('Sending cancelled.', 'mailblast')); ?>, 'warning');
+    }
+
+    // ── safe fetch wrapper ───────────────────────────────────────────────
+
+    function doFetch(fd, onOk, onFail) {
+      var url = <?php echo json_encode($formAction); ?>;
+      fetch(url, { method: 'POST', body: fd })
+        .then(function(r) { return r.text(); })
+        .then(function(text) {
+          var data;
+          try { data = JSON.parse(text); } catch(e) {
+            onFail((i18n.badResponse || 'Bad server response') + ': ' + text.substring(0, 150));
+            return;
+          }
+          if (!data.ok) { onFail(data.error || i18n.serverError || 'Server error'); return; }
+          onOk(data);
+        })
+        .catch(function(e) { onFail((i18n.networkError || 'Network error') + ': ' + (e.message || e)); });
+    }
+
+    // ── batch loop ───────────────────────────────────────────────────────
+
+    var _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [];
+    var _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
+
+    function processNext(offset) {
+      if (_cancelled) { finish(); return; }
+
+      var fd = new FormData();
+      fd.append('_glpi_csrf_token', csrfToken());
+      fd.append('action',           'queue_process');
+      fd.append('send_id',          _sendId);
+      fd.append('offset',           offset);
+      fd.append('html',             _qHtml);
+      fd.append('plain',            _qPlain);
+      fd.append('attachments_b64',  JSON.stringify(_qAttB64));
+
+      doFetch(fd,
+        function(data) {
+          if (_cancelled) { finish(); return; }
+          updateCsrf(data.csrf);
+          _totalSent   += data.sent   || 0;
+          _totalErrors += data.errors || 0;
+          var processed = Math.min(data.next_offset || offset, _total);
+          var pct = _total > 0 ? Math.round((processed / _total) * 100) : 0;
+          setBar(pct);
+          setCounters(_totalSent, _totalErrors, Math.max(0, _total - processed));
+          var lbl = $$('mb_progressLabel2');
+          if (lbl) lbl.textContent = processed + ' / ' + _total;
+
+          if (data.error_list && data.error_list.length) {
+            data.error_list.forEach(addErrorItem);
+          }
+
+          if (data.done || _cancelled) {
             finish();
           } else {
-            processNext(sendId, data.next_offset);
+            processNext(data.next_offset);
           }
-        })
-        .catch(() => finish());
+        },
+        function(err) { finish(err); }
+      );
     }
 
-    // Step 1: init queue — server builds recipient count and returns html/plain/attachments_b64
-    const initFd = new FormData(form);
-    initFd.set('action', 'queue_init');
-    // Ensure TinyMCE content is in the form data
-    if (typeof tinymce !== 'undefined') {
-      tinymce.editors.forEach(ed => {
-        initFd.set(ed.getElement().name, ed.getContent());
+    // ── start: init queue then begin batches ─────────────────────────────
+
+    function startSend() {
+      var form = $$('mb_sendForm');
+      if (!form) { return; }
+
+      // Reset all state
+      _cancelled   = false;
+      _totalSent   = 0;
+      _totalErrors = 0;
+      _total       = 0;
+      _sendId      = '';
+      _qHtml       = '';
+      _qPlain      = '';
+      _qAttB64     = [];
+      _startTime   = Date.now();
+
+      // Reset UI
+      setStatus('');
+      setBar(0);
+      setCounters(0, 0, 0);
+      var lbl = $$('mb_progressLabel2'); if (lbl) lbl.textContent = '0 / 0';
+      var el  = $$('mb_elapsed');        if (el)  el.textContent  = '0s';
+      var es  = $$('mb_errorSection');   if (es)  es.style.display = 'none';
+      var eli = $$('mb_errorList');      if (eli) eli.innerHTML   = '';
+      var b   = $$('mb_progressBar');
+      if (b) {
+        b.className = 'progress-bar progress-bar-striped progress-bar-animated fw-semibold';
+        b.style.width = '0%'; b.textContent = '0%';
+        b.setAttribute('aria-valuenow', 0);
+      }
+
+      // Reset cancel/close buttons
+      var cb = $$('mb_cancelSend'); var cl = $$('mb_closeProgress');
+      if (cb) { cb.classList.remove('d-none', 'btn-danger'); cb.classList.add('btn-outline-danger'); cb.disabled = false; cb.innerHTML = '<i class="ti ti-x me-1"></i>' + <?php echo json_encode(__('Cancel', 'mailblast')); ?>; }
+      if (cl) { cl.classList.add('d-none'); }
+
+      // Ticker
+      if (_ticker) clearInterval(_ticker);
+      _ticker = setInterval(function() {
+        var el2 = $$('mb_elapsed');
+        if (el2) el2.textContent = Math.floor((Date.now() - _startTime) / 1000) + 's';
+      }, 1000);
+
+      // Show progress modal
+      if (!_progressModal) _progressModal = new bootstrap.Modal($$('mb_progressModal'));
+      _progressModal.show();
+
+      // Build FormData manually — never use new FormData(form) because it
+      // includes the file input (files assigned via DataTransfer) which causes
+      // the request to fail silently in many browsers or exceed post_max_size.
+      // Attachments travel via attachments_b64 JSON, not via file upload.
+      var fd = new FormData();
+      fd.append('_glpi_csrf_token', csrfToken());
+      fd.append('action',  'queue_init');
+      fd.append('subject', ($$('mb_subject') || {}).value || '');
+
+      // Sync TinyMCE and read textareas directly
+      if (typeof tinymce !== 'undefined') {
+        try { tinymce.triggerSave(); } catch(e) {}
+      }
+      var bodyEl   = document.querySelector('textarea[name="body"]');
+      var footerEl = document.querySelector('textarea[name="footer"]');
+      fd.append('body',   bodyEl   ? bodyEl.value   : '');
+      fd.append('footer', footerEl ? footerEl.value : '');
+
+      // Attachments: read from window._mbSelectedFiles (same as test-send)
+      var attFiles = window._mbSelectedFiles ? Array.from(window._mbSelectedFiles.files) : [];
+      // We pass them as base64 JSON — no file upload needed
+      // (queue_init reads attachments_b64 from POST, not $_FILES)
+      // Encode them now and append as JSON string
+      var attB64Pending = attFiles.length;
+      var attB64List    = [];
+
+      function _doQueueInit() {
+        fd.append('attachments_b64', JSON.stringify(attB64List));
+        setStatus(<?php echo json_encode(__('Sending emails', 'mailblast')); ?> + '…', 'info');
+        doFetch(fd,
+          function(data) {
+            updateCsrf(data.csrf);
+            _total  = data.total || 0;
+            _sendId = data.send_id || '';
+            _qHtml  = data.html   || '';
+            _qPlain = data.plain  || '';
+            _qAttB64 = data.attachments_b64 || [];
+            setCounters(0, 0, _total);
+            var lbl2 = $$('mb_progressLabel2'); if (lbl2) lbl2.textContent = '0 / ' + _total;
+            if (_total === 0) {
+              finish();
+              setStatus(<?php echo json_encode(__('No active users with registered email found', 'mailblast')); ?>, 'warning');
+              return;
+            }
+            processNext(0);
+          },
+          function(err) { finish(err); }
+        );
+      }
+
+      if (attB64Pending === 0) {
+        _doQueueInit();
+      } else {
+        attFiles.forEach(function(file) {
+          var reader = new FileReader();
+          reader.onload = function(ev) {
+            var parts = ev.target.result.split(',');
+            attB64List.push({ name: file.name, mime: file.type || 'application/octet-stream', data: parts[1] || '' });
+            attB64Pending--;
+            if (attB64Pending === 0) _doQueueInit();
+          };
+          reader.onerror = function() { attB64Pending--; if (attB64Pending === 0) _doQueueInit(); };
+          reader.readAsDataURL(file);
+        });
+      }
+    } // end startSend
+
+    // ── wire: Send All button ────────────────────────────────────────────
+
+    var sendAllBtn = $$('mb_sendAll');
+    if (sendAllBtn) {
+      sendAllBtn.addEventListener('click', function() {
+        var subjectEl = $$('mb_subject');
+        if (!subjectEl || !subjectEl.value.trim()) { showFormAlert(i18n.subjectRequired); return; }
+        if (typeof tinymce !== 'undefined') { try { tinymce.triggerSave(); } catch(e) {} }
+        var bodyEl = document.querySelector('textarea[name="body"]');
+        var bodyText = bodyEl ? bodyEl.value.replace(/<[^>]*>/g, '').trim() : '';
+        if (!bodyText) { hideFormAlert(); showFormAlert(i18n.bodyRequired); return; }
+
+        hideFormAlert();
+        if (!_confirmModal) _confirmModal = new bootstrap.Modal($$('mb_confirmModal'));
+        _confirmModal.show();
       });
     }
 
-    modal.show();
+    // ── wire: Confirm Send button ─────────────────────────────────────────
 
-    fetch(<?php echo json_encode($formAction); ?>, { method: 'POST', body: initFd })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) { finish(); return; }
-        total    = data.total;
-        _qHtml   = data.html   || '';
-        _qPlain  = data.plain  || '';
-        _qAttB64 = data.attachments_b64 || [];
-        elPend.textContent = total;
-        bar.setAttribute('aria-valuemax', '100');
-        processNext(data.send_id, 0);
-      })
-      .catch(() => finish());
-  });
+    var confirmBtn = $$('mb_confirmSend');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', function() {
+        if (_confirmModal) _confirmModal.hide();
+        var modalEl = $$('mb_confirmModal');
+        if (modalEl) {
+          modalEl.addEventListener('hidden.bs.modal', function() { startSend(); }, { once: true });
+        } else {
+          startSend();
+        }
+      });
+    }
+
+    // ── wire: Cancel button (bound once) ─────────────────────────────────
+
+    var cancelBtn = $$('mb_cancelSend');
+    var _cancelStep = 0;
+    if (cancelBtn && !_cancelBound) {
+      _cancelBound = true;
+      cancelBtn.addEventListener('click', function() {
+        _cancelStep++;
+        if (_cancelStep === 1) {
+          // First click: show warning text on button itself, auto-revert after 4s
+          cancelBtn.classList.replace('btn-outline-danger', 'btn-danger');
+          cancelBtn.innerHTML = '<i class="ti ti-alert-triangle me-1"></i>'
+                              + (window._mbI18n ? window._mbI18n.cancelConfirm : '');
+          setTimeout(function() {
+            if (!_cancelled) {
+              _cancelStep = 0;
+              cancelBtn.classList.replace('btn-danger', 'btn-outline-danger');
+              cancelBtn.innerHTML = '<i class="ti ti-x me-1"></i>' + <?php echo json_encode(__('Cancel', 'mailblast')); ?>;
+            }
+          }, 4000);
+        } else {
+          // Second click: cancel immediately
+          _cancelled   = true;
+          _cancelStep  = 0;
+          cancelBtn.disabled = true;
+          cancelBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>'
+                              + (window._mbI18n ? window._mbI18n.cancelling : <?php echo json_encode(__('Cancelling…', 'mailblast')); ?>);
+          // Finish immediately — don't wait for in-flight fetch
+          finish();
+        }
+      });
+    }
+
+  }()); // end mass-send IIFE
 
   // ── sessionStorage: survive theme switches ────────────────────────────────
   //
@@ -1139,7 +1393,8 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
       var subjectEl = document.getElementById('mb_subject');
       var subjectVal = subjectEl ? subjectEl.value.trim() : '';
       if (!subjectVal) {
-        alert(<?php echo json_encode(__('Subject is required', 'mailblast')); ?>);
+        var _fa = document.getElementById('mb_formAlert');
+        if (_fa) { _fa.textContent = <?php echo json_encode(__('Subject is required', 'mailblast')); ?>; _fa.style.display = ''; }
         return;
       }
 
