@@ -56,7 +56,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
 ### From GitHub releases (recommended)
 
-1. Download `mailblast-1_0_0.zip` from the [releases page](https://github.com/monta990/mailblast/releases).
+1. Download the zip file from the [releases page](https://github.com/monta990/mailblast/releases).
 2. Extract into your GLPI plugins directory:
    ```
    glpi/plugins/mailblast/
@@ -217,7 +217,7 @@ Sin servicios externos. Sin tareas cron. Sin dependencias adicionales más allá
 
 ### Desde GitHub releases (recomendado)
 
-1. Descarga `mailblast-1_0_0.zip` desde la [página de releases](https://github.com/monta990/mailblast/releases).
+1. Descarga el archivo zip desde la [página de releases](https://github.com/monta990/mailblast/releases).
 2. Extrae en el directorio de plugins de GLPI:
    ```
    glpi/plugins/mailblast/

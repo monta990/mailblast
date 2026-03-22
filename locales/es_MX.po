@@ -126,8 +126,6 @@ msgstr "Se produjeron %1$d error(es)"
 msgid "%1$s: MIME type %2$s is not allowed by GLPI"
 msgstr "%1$s: el tipo MIME %2$s no está permitido por GLPI"
 
-msgid "Confirm send to all users?"
-msgstr "¿Confirmas el envío a todos los usuarios?"
 
 msgid "Sending emails"
 msgstr "Enviando correos"

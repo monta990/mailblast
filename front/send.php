@@ -4,27 +4,8 @@
  * Main compose & send page.
  */
 
-// Locate GLPI root reliably regardless of whether the plugin is installed
-// under /plugins/ or /marketplace/ and regardless of the server's document root.
-//
-// __DIR__  = …/marketplace/mailblast/front
-// [0] up   = …/marketplace/mailblast
-// [1] up   = …/marketplace          (or /plugins)
-// [2] up   = …/glpi-root
-//
-// GLPI_ROOT is already defined when GLPI loads setup.php, but when
-// front/send.php is hit directly we must bootstrap it ourselves.
-if (!defined('GLPI_ROOT')) {
-    $glpiRoot = dirname(__DIR__, 3);
-    // Safety-check: verify we actually found the GLPI root
-    if (!file_exists($glpiRoot . '/inc/includes.php')) {
-        // Walk up one more level in case of non-standard layout
-        $glpiRoot = dirname(__DIR__, 4);
-    }
-    include_once $glpiRoot . '/inc/includes.php';
-} else {
-    include_once GLPI_ROOT . '/inc/includes.php';
-}
+// GLPI 11 always bootstraps via Symfony — GLPI_ROOT is defined before this file runs.
+include_once GLPI_ROOT . '/inc/includes.php';
 
 Session::checkRight('config', UPDATE);
 
@@ -360,7 +341,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
           // Use initEditorSystem() directly so we can pass statusbar=false.
           // Html::textarea() calls initEditorSystem() internally but does NOT
           // expose the $statusbar parameter — only initEditorSystem() does.
-          $mb_body_rand = mt_rand();
+          $mb_body_rand = uniqid();
           $mb_body_id   = 'mb_body_' . $mb_body_rand;
           echo '<textarea class="form-control" name="body" id="' . $mb_body_id . '" rows="15">'
              . htmlspecialchars($savedForm['body'], ENT_QUOTES, 'UTF-8')
@@ -389,7 +370,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
             <?php echo __('Footer', 'mailblast'); ?>
           </label>
           <?php
-          $mb_footer_rand = mt_rand();
+          $mb_footer_rand = uniqid();
           $mb_footer_id   = 'mb_footer_' . $mb_footer_rand;
           echo '<textarea class="form-control" name="footer" id="' . $mb_footer_id . '" rows="5">'
              . htmlspecialchars($savedForm['footer'], ENT_QUOTES, 'UTF-8')
@@ -643,9 +624,6 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
               </div>
               <div class="modal-body">
 
-                <!-- Status line -->
-                <div id="mb_statusLine" class="alert alert-info py-2 small mb-3" style="display:none"></div>
-
                 <!-- Sending X of Y label -->
                 <div class="d-flex justify-content-between align-items-center mb-1">
                   <span class="text-muted small"><?php echo __('Progress', 'mailblast'); ?></span>
@@ -789,7 +767,6 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
     remove:          <?php echo json_encode(__('Remove',                    'mailblast')); ?>,
     subjectRequired: <?php echo json_encode(__('Subject is required',       'mailblast')); ?>,
     bodyRequired:    <?php echo json_encode(__('Body is required',          'mailblast')); ?>,
-    confirmSend:     <?php echo json_encode(__('Confirm send to all users?','mailblast')); ?>,
     bytes:           <?php echo json_encode(__('B',                         'mailblast')); ?>,
     kilobytes:       <?php echo json_encode(__('KB',                        'mailblast')); ?>,
     megabytes:       <?php echo json_encode(__('MB',                        'mailblast')); ?>,
@@ -928,11 +905,11 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
   (function () {
     'use strict';
 
-    var _confirmModal  = null;
-    var _progressModal = null;
-    var _cancelBound   = false;   // cancel listener added only once
-    var _cancelled     = false;
-    var _ticker        = null;
+    let _confirmModal  = null;
+    let _progressModal = null;
+    let _cancelBound   = false;   // cancel listener added only once
+    let _cancelled     = false;
+    let _ticker        = null;
 
     function $$(id) { return document.getElementById(id); }
     function csrfToken() { var el = document.querySelector('input[name="_glpi_csrf_token"]'); return el ? el.value : ''; }
@@ -1029,8 +1006,8 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
     // ── batch loop ───────────────────────────────────────────────────────
 
-    var _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [];
-    var _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
+    let _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [];
+    let _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
 
     function processNext(offset) {
       if (_cancelled) { finish(); return; }
@@ -1079,6 +1056,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
       // Reset all state
       _cancelled   = false;
+      _cancelStep  = 0;
       _totalSent   = 0;
       _totalErrors = 0;
       _total       = 0;
@@ -1188,7 +1166,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
     // ── wire: Send All button ────────────────────────────────────────────
 
-    var sendAllBtn = $$('mb_sendAll');
+    const sendAllBtn = $$('mb_sendAll');
     if (sendAllBtn) {
       sendAllBtn.addEventListener('click', function() {
         var subjectEl = $$('mb_subject');
@@ -1206,7 +1184,7 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
     // ── wire: Confirm Send button ─────────────────────────────────────────
 
-    var confirmBtn = $$('mb_confirmSend');
+    const confirmBtn = $$('mb_confirmSend');
     if (confirmBtn) {
       confirmBtn.addEventListener('click', function() {
         if (_confirmModal) _confirmModal.hide();
@@ -1221,8 +1199,8 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
     // ── wire: Cancel button (bound once) ─────────────────────────────────
 
-    var cancelBtn = $$('mb_cancelSend');
-    var _cancelStep = 0;
+    const cancelBtn = $$('mb_cancelSend');
+    let _cancelStep = 0;
     if (cancelBtn && !_cancelBound) {
       _cancelBound = true;
       cancelBtn.addEventListener('click', function() {

@@ -476,30 +476,6 @@ class PluginMailblastMailblast extends CommonGLPI
         return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
-    /**
-     * @deprecated No longer called — documents are embedded as base64 but not deleted.
-     * Kept for reference only.
-     */
-    private static function purgeDocument(int $docId): void
-    {
-        global $DB;
-
-        $iterator = $DB->request([
-            'SELECT' => ['filepath'],
-            'FROM'   => 'glpi_documents',
-            'WHERE'  => ['id' => $docId],
-        ]);
-
-        if ($iterator->count()) {
-            $fullPath = GLPI_DOC_DIR . '/' . $iterator->current()['filepath'];
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
-            }
-        }
-
-        $DB->delete('glpi_documents', ['id' => $docId]);
-    }
-
     // ─── Mail helpers ─────────────────────────────────────────────────────
 
     /**
