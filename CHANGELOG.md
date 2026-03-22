@@ -5,6 +5,39 @@ Dates follow **GMT-7 (Hermosillo)**.
 
 ---
 
+## [1.0.1] — 2026-03-22
+
+### Fixed
+
+- **SMTP connection created once per send cycle** — `Transport::fromDsn()` was
+  instantiated on every individual email, causing a new TLS handshake per
+  recipient. It is now created once before the send loop and reused for all
+  recipients in `sendMails()` and `processBatch()`.
+- **`countActiveUsersWithEmail()` used a full table scan** — replaced with a
+  direct `SELECT COUNT(*)` query so no rows are loaded into memory just to count.
+- **Orphaned queue jobs** — if the browser was closed mid-send, the
+  `queue_<id>` entry remained in `glpi_configs` indefinitely. Each new queue
+  now includes a `created_at` timestamp, and `cleanupStaleJobs()` removes any
+  job older than 2 hours when a new send is initiated.
+- **Accidental HTML output could corrupt AJAX JSON** — `ob_start()` / `ob_end_clean()`
+  guards added to all three AJAX actions (`test_send`, `queue_init`, `queue_process`).
+- **`queue_process` accepted an empty HTML body** — now returns a JSON error if
+  `html` is blank, preventing silent empty-body mass sends.
+- **Dead code in `validateUploadedFiles()`** — the `else` branch handling a
+  non-array `$_FILES` entry was unreachable; removed.
+- **`embedImagesAsBase64()` deleted GLPI documents** — after embedding an image
+  as base64, the function hard-deleted the source document from `glpi_documents`
+  and disk. Documents are no longer deleted; they are only read and embedded.
+- **`sendId` used `mt_rand()`** — replaced with `bin2hex(random_bytes())` for a
+  cryptographically secure job identifier.
+- **`usleep` condition in `sendMails()`** — simplified from
+  `!$testMode && count($recipients) > 1` to `!$testMode`; the count check was
+  redundant since test mode always has exactly one recipient.
+- **Double horizontal rule between EN/ES sections in README** — replaced with a
+  single `---`.
+
+---
+
 ## [1.0.0] — 2026-03-21
 
 ### Added

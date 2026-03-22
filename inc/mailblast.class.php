@@ -101,7 +101,23 @@ class PluginMailblastMailblast extends CommonGLPI
 
     public static function countActiveUsersWithEmail(): int
     {
-        return count(self::getActiveUsersWithEmail());
+        global $DB;
+
+        $iterator = $DB->request([
+            'COUNT'     => 'cpt',
+            'FROM'      => 'glpi_useremails AS ue',
+            'LEFT JOIN' => [
+                'glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']],
+            ],
+            'WHERE' => [
+                'ue.is_default' => 1,
+                'u.is_deleted'  => 0,
+                'u.is_active'   => 1,
+                'NOT'           => ['ue.email' => ''],
+            ],
+        ]);
+
+        return (int) ($iterator->current()['cpt'] ?? 0);
     }
 
     // ─── GLPI allowed document types ─────────────────────────────────────
@@ -149,20 +165,14 @@ class PluginMailblastMailblast extends CommonGLPI
         $accepted = [];
         $rejected = [];
 
-        $count = is_array($filesEntry['name']) ? count($filesEntry['name']) : 1;
+        // Attachments always arrive as array (name="attachments[]").
+        $count = is_array($filesEntry['name']) ? count($filesEntry['name']) : 0;
 
         for ($i = 0; $i < $count; $i++) {
-            if (is_array($filesEntry['name'])) {
-                $name  = $filesEntry['name'][$i]     ?? '';
-                $tmp   = $filesEntry['tmp_name'][$i] ?? '';
-                $error = $filesEntry['error'][$i]    ?? UPLOAD_ERR_NO_FILE;
-                $size  = $filesEntry['size'][$i]     ?? 0;
-            } else {
-                $name  = $filesEntry['name']     ?? '';
-                $tmp   = $filesEntry['tmp_name'] ?? '';
-                $error = $filesEntry['error']    ?? UPLOAD_ERR_NO_FILE;
-                $size  = $filesEntry['size']     ?? 0;
-            }
+            $name  = $filesEntry['name'][$i]     ?? '';
+            $tmp   = $filesEntry['tmp_name'][$i] ?? '';
+            $error = $filesEntry['error'][$i]    ?? UPLOAD_ERR_NO_FILE;
+            $size  = $filesEntry['size'][$i]     ?? 0;
 
             if ($error === UPLOAD_ERR_NO_FILE || $tmp === '' || $name === '') {
                 continue;
@@ -217,13 +227,14 @@ class PluginMailblastMailblast extends CommonGLPI
         string $footer,
         array  $attachments
     ): array {
+        // Use cryptographically secure random bytes for the job ID.
         $sendId = sprintf(
-            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+            '%s-%s-%s-%s-%s',
+            bin2hex(random_bytes(4)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(2)),
+            bin2hex(random_bytes(6))
         );
 
         // Read attachment bytes into memory — nothing written to disk or DB.
@@ -245,10 +256,14 @@ class PluginMailblastMailblast extends CommonGLPI
 
         Config::setConfigurationValues(self::CONFIG_CONTEXT, [
             'queue_' . $sendId => json_encode([
-                'subject' => $subject,
-                'total'   => $total,
+                'subject'    => $subject,
+                'total'      => $total,
+                'created_at' => time(),
             ]),
         ]);
+
+        // Purge any jobs older than 2 hours before starting a new one.
+        self::cleanupStaleJobs();
 
         return [
             'send_id'         => $sendId,
@@ -325,6 +340,9 @@ class PluginMailblastMailblast extends CommonGLPI
             }
         }
 
+        // Create transport once for the whole batch — one SMTP handshake per batch.
+        $transport = \Symfony\Component\Mailer\Transport::fromDsn(GLPIMailer::buildDsn(true));
+
         foreach ($iterator as $row) {
             $displayName = trim($row['firstname'] . ' ' . $row['realname']);
             if ($displayName === '') $displayName = $row['login'];
@@ -338,7 +356,7 @@ class PluginMailblastMailblast extends CommonGLPI
             }
 
             $err = self::sendSymfonyEmail(
-                $toEmail, $displayName, $subject, $html, $plain, $batchTempFiles
+                $transport, $toEmail, $displayName, $subject, $html, $plain, $batchTempFiles
             );
 
             if ($err === null) {
@@ -368,6 +386,36 @@ class PluginMailblastMailblast extends CommonGLPI
             'done'        => $done,
             'error_list'  => $errorList,
         ];
+    }
+
+    /**
+     * Removes job entries older than $maxAgeSeconds from glpi_configs.
+     * Called at the start of each new queue to prevent orphaned entries
+     * accumulating if the browser was closed during a mass send.
+     */
+    public static function cleanupStaleJobs(int $maxAgeSeconds = 7200): void
+    {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT' => ['name', 'value'],
+            'FROM'   => 'glpi_configs',
+            'WHERE'  => [
+                'context' => self::CONFIG_CONTEXT,
+                ['name' => ['LIKE', 'queue_%']],
+            ],
+        ]);
+
+        foreach ($iterator as $row) {
+            $job = json_decode((string) $row['value'], true);
+            $createdAt = (int) ($job['created_at'] ?? 0);
+            if ($createdAt > 0 && (time() - $createdAt) > $maxAgeSeconds) {
+                $DB->delete('glpi_configs', [
+                    'context' => self::CONFIG_CONTEXT,
+                    'name'    => $row['name'],
+                ]);
+            }
+        }
     }
 
     /** Removes the minimal job metadata from glpi_configs. */
@@ -404,7 +452,8 @@ class PluginMailblastMailblast extends CommonGLPI
                     return $m[0];
                 }
 
-                self::purgeDocument($docId);
+                // Do NOT purge the document — the user may reuse it elsewhere.
+                // Embedding as base64 is sufficient; the file stays in glpi_documents.
                 return $m[1] . $embedded . $m[4];
             },
             $html
@@ -443,6 +492,10 @@ class PluginMailblastMailblast extends CommonGLPI
         return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
+    /**
+     * @deprecated No longer called — documents are embedded as base64 but not deleted.
+     * Kept for reference only.
+     */
     private static function purgeDocument(int $docId): void
     {
         global $DB;
@@ -486,6 +539,7 @@ class PluginMailblastMailblast extends CommonGLPI
      * @return string|null  Error message on failure, null on success.
      */
     private static function sendSymfonyEmail(
+        \Symfony\Component\Mailer\Transport\TransportInterface $transport,
         string $toEmail,
         string $toName,
         string $subject,
@@ -496,10 +550,6 @@ class PluginMailblastMailblast extends CommonGLPI
         global $CFG_GLPI;
 
         try {
-            $transport = \Symfony\Component\Mailer\Transport::fromDsn(
-                GLPIMailer::buildDsn(true)
-            );
-
             $email = new \Symfony\Component\Mime\Email();
 
             // From address — same config GLPI reads for notifications
@@ -611,6 +661,9 @@ class PluginMailblastMailblast extends CommonGLPI
         $sent   = 0;
         $errors = [];
 
+        // Create transport once — avoids a new SMTP handshake per recipient.
+        $transport = \Symfony\Component\Mailer\Transport::fromDsn(GLPIMailer::buildDsn(true));
+
         foreach ($recipients as $recipient) {
             $toEmail = trim((string) $recipient['email']);
             $toName  = (string) ($recipient['name'] ?? '');
@@ -621,7 +674,7 @@ class PluginMailblastMailblast extends CommonGLPI
             }
 
             $err = self::sendSymfonyEmail(
-                $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths
+                $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths
             );
 
             if ($err === null) {
@@ -630,8 +683,8 @@ class PluginMailblastMailblast extends CommonGLPI
                 $errors[] = $toEmail . ': ' . $err;
             }
 
-            if (!$testMode && count($recipients) > 1) {
-                usleep(120_000); // 120 ms — avoid SMTP rate limits
+            if (!$testMode) {
+                usleep(120_000); // 120 ms between sends — avoid SMTP rate limits
             }
         }
 

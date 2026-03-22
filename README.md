@@ -160,7 +160,6 @@ GPL v2 or later. See [LICENSE](https://www.gnu.org/licenses/old-licenses/gpl-2.0
 Report bugs or request features on the [issue tracker](https://github.com/monta990/mailblast/issues).
 
 ---
----
 
 <p align="center">
   <img src="logo.png" width="120" alt="Logo de Mail Blast">

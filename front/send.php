@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'queue_init') {
+        ob_start();
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
         $attachments = [];
@@ -119,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $attachments);
+        ob_end_clean();
         header('Content-Type: application/json');
         echo json_encode([
             'ok'              => true,
@@ -132,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'queue_process') {
+        ob_start();
         $sendId = trim((string) ($_POST['send_id'] ?? ''));
         $offset = max(0, (int) ($_POST['offset'] ?? 0));
         $html   = (string) ($_POST['html']  ?? '');
@@ -140,12 +143,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attB64 = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
 
         if ($sendId === '') {
+            ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Missing send_id', 'mailblast')]);
             exit;
         }
 
+        if (trim(strip_tags($html)) === '') {
+            ob_end_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => __('Body is required', 'mailblast')]);
+            exit;
+        }
+
         $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, 15);
+        ob_end_clean();
         header('Content-Type: application/json');
         echo json_encode(['ok' => true] + $result);
         exit;
