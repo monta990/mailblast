@@ -22,8 +22,6 @@
 
 No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
-> **Requires GLPI 11.0 or later.**
-
 ---
 
 ## Features
