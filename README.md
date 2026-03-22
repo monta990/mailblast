@@ -183,7 +183,6 @@ Report bugs or request features on the [issue tracker](https://github.com/monta9
 
 Sin servicios externos. Sin tareas cron. Sin dependencias adicionales más allá del propio GLPI.
 
-
 ---
 
 ## Características
