@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+   <name>Mail Blast</name>
+   <key>mailblast</key>
+   <state>stable</state>
+   <logo>https://raw.githubusercontent.com/monta990/mailblast/main/logo.png</logo>
+   <description>
+      <short>
+         <en>Send bulk HTML emails to all active GLPI users with a registered address.</en>
+         <es_MX>Envía correos HTML masivos a todos los usuarios activos de GLPI con correo registrado.</es_MX>
+         <fr_FR>Envoyez des e-mails HTML en masse à tous les utilisateurs GLPI actifs ayant une adresse enregistrée.</fr_FR>
+         <de_DE>Massen-HTML-E-Mails an alle aktiven GLPI-Benutzer mit registrierter Adresse senden.</de_DE>
+      </short>
+      <long>
+         <en>
+## Mail Blast
+
+Send a bulk email to every active GLPI user that has a default email address registered, directly from GLPI using its native SMTP configuration.
+
+### Features
+
+- **Rich-text editor** (TinyMCE) for both body and footer — bold, italic, links, tables, images
+- **Inline image embedding** — images pasted or uploaded via the editor are converted to base64 and purged from the server
+- **Attachments** — upload files directly from your computer; only MIME types allowed by GLPI are accepted
+- **Progress modal** — real-time batch progress bar showing sent / errors / pending count and elapsed time
+- **Queue-based sending** — recipients are stored in a DB queue and processed in batches of 15; the browser never freezes
+- **Test send** — send to your own admin address or any specific address before the mass mailing
+- **Form persistence** — subject, body and footer are saved automatically and restored on next visit
+- **Dark/light mode** — fully theme-aware, content survives theme switches via sessionStorage
+- **Fully localized** — es_MX, en_US, en_GB, fr_FR, de_DE
+         </en>
+         <es_MX>
+## Mail Blast
+
+Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dirección de correo predeterminada registrada, directamente desde GLPI utilizando su configuración SMTP nativa.
+
+### Características
+
+- **Editor de texto enriquecido** (TinyMCE) para cuerpo y pie — negritas, cursiva, enlaces, tablas, imágenes
+- **Imágenes embebidas en base64** — las imágenes pegadas o subidas se convierten a base64 y se eliminan del servidor
+- **Archivos adjuntos** — sube archivos desde tu equipo; solo se aceptan los tipos MIME permitidos por GLPI
+- **Modal de progreso** — barra de progreso en tiempo real con contadores de enviados / errores / pendientes
+- **Envío por cola** — los destinatarios se procesan en lotes de 15; el navegador nunca se congela
+- **Correo de prueba** — envía a tu dirección de administrador o a una dirección específica antes del envío masivo
+- **Persistencia del formulario** — asunto, cuerpo y pie se guardan automáticamente
+- **Modo oscuro/claro** — compatible con ambos temas de GLPI
+- **Completamente localizado** — es_MX, en_US, en_GB, fr_FR, de_DE
+         </es_MX>
+      </long>
+   </description>
+   <homepage>https://github.com/monta990/mailblast</homepage>
+   <download>https://github.com/monta990/mailblast/releases</download>
+   <issues>https://github.com/monta990/mailblast/issues</issues>
+   <readme>https://github.com/monta990/mailblast/blob/main/README.md</readme>
+   <authors>
+      <author>Edwin Elias Alvarez</author>
+   </authors>
+   <versions>
+      <version>
+         <num>1.0.0</num>
+         <compatibility>~11.0</compatibility>
+         <download_url>https://github.com/monta990/mailblast/releases/download/1.0.0/mailblast-1_0_0.zip</download_url>
+      </version>
+   </versions>
+   <langs>
+      <lang>es_MX</lang>
+      <lang>en_US</lang>
+      <lang>en_GB</lang>
+      <lang>fr_FR</lang>
+      <lang>de_DE</lang>
+   </langs>
+   <license>GPL v2+</license>
+   <tags>
+      <en>
+         <tag>email</tag>
+         <tag>mail</tag>
+         <tag>bulk</tag>
+         <tag>notification</tag>
+         <tag>mailing</tag>
+         <tag>users</tag>
+      </en>
+      <es_MX>
+         <tag>correo</tag>
+         <tag>masivo</tag>
+         <tag>notificación</tag>
+         <tag>usuarios</tag>
+      </es_MX>
+   </tags>
+   <screenshots>
+      <screenshot>https://raw.githubusercontent.com/monta990/mailblast/main/config.png</screenshot>
+   </screenshots>
+</root>

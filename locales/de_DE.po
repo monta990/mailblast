@@ -1,0 +1,170 @@
+# Mail Blast GLPI Plugin — German (Germany)
+# Copyright (C) 2026 Edwin Elias Alvarez
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Mail Blast 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-21 00:00-0700\n"
+"PO-Revision-Date: 2026-03-21 00:00-0700\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: German (Germany)\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Mail Blast"
+msgstr "Massen-E-Mail"
+
+msgid "Send bulk email"
+msgstr "Massen-E-Mail senden"
+
+msgid "Compose message"
+msgstr "Nachricht verfassen"
+
+msgid "Subject"
+msgstr "Betreff"
+
+msgid "Message body"
+msgstr "Nachrichtentext"
+
+msgid "Footer"
+msgstr "Fußzeile"
+
+msgid "Attachments"
+msgstr "Anhänge"
+
+msgid "Only file types allowed by GLPI are accepted"
+msgstr "Nur von GLPI erlaubte Dateitypen werden akzeptiert"
+
+msgid "View allowed file types"
+msgstr "Erlaubte Dateitypen anzeigen"
+
+msgid "Drag & drop files here or"
+msgstr "Dateien hier ablegen oder"
+
+msgid "browse"
+msgstr "durchsuchen"
+
+msgid "user@company.com"
+msgstr "benutzer@firma.de"
+
+msgid "Remove"
+msgstr "Entfernen"
+
+msgid "B"
+msgstr "B"
+
+msgid "KB"
+msgstr "KB"
+
+msgid "MB"
+msgstr "MB"
+
+msgid "Test email"
+msgstr "Test-E-Mail"
+
+msgid "Send to my address (administrator)"
+msgstr "An meine Adresse senden (Administrator)"
+
+msgid "Send to a specific address"
+msgstr "An eine bestimmte Adresse senden"
+
+msgid "Test address"
+msgstr "Testadresse"
+
+msgid "Send test email"
+msgstr "Test-E-Mail senden"
+
+msgid "Mass mailing"
+msgstr "Massenversand"
+
+msgid "Active users with registered email"
+msgstr "Aktive Benutzer mit registrierter E-Mail"
+
+msgid "No active users with registered email found"
+msgstr "Keine aktiven Benutzer mit registrierter E-Mail gefunden"
+
+msgid "Send to all users"
+msgstr "An alle Benutzer senden"
+
+msgid "Subject is required"
+msgstr "Betreff ist erforderlich"
+
+msgid "Body is required"
+msgstr "Nachrichtentext ist erforderlich"
+
+msgid "Test address is required"
+msgstr "Testadresse ist erforderlich"
+
+msgid "No email found for your account"
+msgstr "Keine E-Mail-Adresse für Ihr Konto gefunden"
+
+msgid "Test sent successfully"
+msgstr "Test erfolgreich gesendet"
+
+msgid "Test failed"
+msgstr "Test fehlgeschlagen"
+
+msgid "Attachment rejected"
+msgstr "Anhang abgelehnt"
+
+msgid "Invalid address"
+msgstr "Ungültige Adresse"
+
+msgid "Upload error code %d"
+msgstr "Upload-Fehler, Code %d"
+
+msgid "%1$d email(s) sent to %2$d recipient(s)"
+msgstr "%1$d E-Mail(s) an %2$d Empfänger gesendet"
+
+msgid "%1$d error(s) occurred"
+msgstr "%1$d Fehler aufgetreten"
+
+msgid "%1$s: MIME type %2$s is not allowed by GLPI"
+msgstr "%1$s: MIME-Typ %2$s ist von GLPI nicht erlaubt"
+
+msgid "Confirm send to all users?"
+msgstr "Versand an alle Benutzer bestätigen?"
+
+msgid "Sending emails"
+msgstr "E-Mails werden gesendet"
+
+msgid "Progress"
+msgstr "Fortschritt"
+
+msgid "Sent"
+msgstr "Gesendet"
+
+msgid "Errors"
+msgstr "Fehler"
+
+msgid "Pending"
+msgstr "Ausstehend"
+
+msgid "Elapsed"
+msgstr "Vergangene Zeit"
+
+msgid "Failed addresses"
+msgstr "Fehlgeschlagene Adressen"
+
+msgid "Close"
+msgstr "Schließen"
+
+
+msgid "Attachment warning"
+msgstr "Anhang-Warnung"
+
+msgid "Sending…"
+msgstr "Senden…"
+
+msgid "Network error"
+msgstr "Netzwerkfehler"
+
+msgid "Initialization error"
+msgstr "Initialisierungsfehler"
+
+msgid "Missing send_id"
+msgstr "Sende-ID fehlt"
