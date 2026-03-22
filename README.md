@@ -9,9 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/monta990/mailblast/releases">
-    <img src="https://img.shields.io/github/v/release/monta990/mailblast?style=flat-square" alt="Latest release">
-  </a>
   <img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility">
   <img src="https://img.shields.io/badge/License-GPL%20v2%2B-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP">
@@ -144,6 +141,15 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## Author
 
 **Edwin Elias Alvarez** — [GitHub](https://github.com/monta990)
+
+---
+
+## Buy me a coffee :)
+If you like my work, you can support me by a donate here:
+
+<a href="https://www.buymeacoffee.com/monta990" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Buy Me A Coffee" height="51px" width="210px"></a>
+
+---
 
 ## License
 
@@ -293,6 +299,15 @@ Ver [CHANGELOG.md](CHANGELOG.md).
 ## Autor
 
 **Edwin Elias Alvarez** — [GitHub](https://github.com/monta990)
+
+---
+
+## Comprame un cafe :)
+Si te gusta nmi trabajo, me puedes apoyar con una donación:
+
+<a href="https://www.buymeacoffee.com/monta990" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Buy Me A Coffee" height="51px" width="210px"></a>
+
+---
 
 ## Licencia
 
