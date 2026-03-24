@@ -199,3 +199,21 @@ msgstr "No se pudo iniciar el envío"
 
 msgid "Batch failed"
 msgstr "Fallo en el lote"
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr "Texto plano. Se admiten negrita, cursiva y subrayado."
+
+msgid "Bold"
+msgstr "Negrita"
+
+msgid "Italic"
+msgstr "Cursiva"
+
+msgid "Underline"
+msgstr "Subrayado"
+
+msgid "user@company.com, other@company.com"
+msgstr "usuario@empresa.com, otro@empresa.com"
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr "Separa varias direcciones con comas. Máximo 5 direcciones."

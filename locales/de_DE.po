@@ -199,3 +199,21 @@ msgstr "Senden konnte nicht gestartet werden"
 
 msgid "Batch failed"
 msgstr "Stapel fehlgeschlagen"
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr "Nur Text. Fett, kursiv und unterstrichen werden unterstützt."
+
+msgid "Bold"
+msgstr "Fett"
+
+msgid "Italic"
+msgstr "Kursiv"
+
+msgid "Underline"
+msgstr "Unterstrichen"
+
+msgid "user@company.com, other@company.com"
+msgstr "benutzer@firma.com, anderer@firma.com"
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr "Trennen Sie mehrere Adressen durch Kommas. Maximal 5 Adressen."

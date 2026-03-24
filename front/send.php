@@ -40,22 +40,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $testMode  = (string) ($_POST['test_mode'] ?? 'my_address');
         $testEmail = '';
 
+        $testEmails = [];
         if ($testMode === 'specific') {
-            $testEmail = trim((string) ($_POST['test_email'] ?? ''));
-            if ($testEmail === '' || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
+            $raw = trim((string) ($_POST['test_email'] ?? ''));
+            if ($raw === '') {
+                ob_end_clean();
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'error' => __('Test address is required', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
+                exit;
+            }
+            // Parse comma-separated addresses, max 5
+            $candidates = array_slice(array_map('trim', explode(',', $raw)), 0, 5);
+            $invalid    = [];
+            foreach ($candidates as $addr) {
+                if ($addr === '') continue;
+                if (!filter_var($addr, FILTER_VALIDATE_EMAIL)) {
+                    $invalid[] = $addr;
+                } else {
+                    $testEmails[] = $addr;
+                }
+            }
+            if (empty($testEmails)) {
                 ob_end_clean();
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => __('Test address is required', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
                 exit;
             }
         } else {
-            $testEmail = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
-            if (empty($testEmail)) {
+            $single = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
+            if (empty($single)) {
                 ob_end_clean();
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => __('No email found for your account', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
                 exit;
             }
+            $testEmails = [$single];
         }
 
         // Decode base64 attachments from JS RAM into per-request temp files
@@ -71,19 +90,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $result = PluginMailblastMailblast::sendMails(
-            $subject, $body, $footer, $tmpAtts, true, $testEmail
-        );
+        // Send to each test address
+        $totalSent   = 0;
+        $allErrors   = [];
+        foreach ($testEmails as $testEmail) {
+            $result = PluginMailblastMailblast::sendMails(
+                $subject, $body, $footer, $tmpAtts, true, $testEmail
+            );
+            $totalSent += $result['sent'];
+            $allErrors  = array_merge($allErrors, $result['errors']);
+        }
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 
         ob_end_clean();
         header('Content-Type: application/json');
         $newToken = Session::getNewCSRFToken();
-        if ($result['sent'] > 0) {
-            echo json_encode(['ok' => true, 'errors' => $result['errors'], 'csrf' => $newToken]);
+        if ($totalSent > 0) {
+            echo json_encode(['ok' => true, 'errors' => $allErrors, 'csrf' => $newToken]);
         } else {
-            $errDetail = !empty($result['errors']) ? implode('; ', $result['errors']) : '';
+            $errDetail = !empty($allErrors) ? implode('; ', $allErrors) : '';
             echo json_encode(['ok' => false, 'error' => __('Test failed', 'mailblast') . ($errDetail ? ': ' . $errDetail : ''), 'csrf' => $newToken]);
         }
         exit;
@@ -338,17 +364,15 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
             <span class="text-danger">*</span>
           </label>
           <?php
-          // Use initEditorSystem() directly so we can pass statusbar=false.
-          // Html::textarea() calls initEditorSystem() internally but does NOT
-          // expose the $statusbar parameter — only initEditorSystem() does.
           $mb_body_rand = uniqid();
           $mb_body_id   = 'mb_body_' . $mb_body_rand;
+
           echo '<textarea class="form-control" name="body" id="' . $mb_body_id . '" rows="15">'
              . htmlspecialchars($savedForm['body'], ENT_QUOTES, 'UTF-8')
              . '</textarea>';
-          // initEditorSystem($id, $rand, $display, $readonly, $enable_images,
-          //                  $editor_height, $add_body_classes, $toolbar_location,
-          //                  $init, $placeholder, $toolbar, $statusbar)
+          // init=false: GLPI stores the config but does NOT call tinyMCE.init.
+          // Our scriptBlock (registered after this one in the ready queue) modifies
+          // the config and calls tinyMCE.init manually.
           echo Html::initEditorSystem(
               $mb_body_id, $mb_body_rand,
               true,   // display
@@ -357,11 +381,58 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
               200,    // editor_height (px)
               [],     // add_body_classes
               'top',  // toolbar_location
-              true,   // init
+              false,  // init ← we init manually below
               '',     // placeholder
               true,   // toolbar
-              false   // statusbar ← removes the "1" word-count bar
+              false,  // statusbar
+              '',     // content_style
+              false,  // init_on_demand
+              ['link'] // remove link plugin
           );
+          // Our scriptBlock runs AFTER GLPI's in the jQuery ready queue.
+          // We modify the config object and init manually.
+          echo Html::scriptBlock('
+$(function() {
+    var id   = ' . json_encode($mb_body_id) . ';
+    var conf = tinymce_editor_configs[id];
+    if (!conf) return;
+
+    // 1. Add alignment buttons to toolbar
+    if (typeof conf.toolbar === "string") {
+        conf.toolbar = conf.toolbar
+            + " | alignleft aligncenter alignright alignjustify";
+    }
+
+    // 2. Fix GLPI\'s document click handler that removes formatting.
+    //    GLPI registers a handler that calls .trigger("click") on active
+    //    toolbar buttons (.tox-tbtn--enabled), which removes lists, indentation
+    //    and formatting when clicking outside the editor.
+    //    We wrap the setup to neutralise that specific behaviour after init.
+    var _origSetup = conf.setup;
+    conf.setup = function(editor) {
+        if (_origSetup) _origSetup(editor);
+        editor.on("init", function() {
+            // Find and patch GLPI\'s anonymous click handler on document
+            var handlers = ($._data(document, "events") || {}).click || [];
+            handlers.forEach(function(h) {
+                if (h.handler.toString().indexOf("tox-tbtn--enabled") !== -1) {
+                    var orig = h.handler;
+                    h.handler = function(e) {
+                        // Temporarily remove --enabled so trigger("click")
+                        // acts on buttons with no active state → no-op for format
+                        var enabled = $(".tox-tbtn.tox-tbtn--enabled");
+                        enabled.removeClass("tox-tbtn--enabled");
+                        orig.call(this, e);
+                        enabled.addClass("tox-tbtn--enabled");
+                    };
+                }
+            });
+        });
+    };
+
+    tinyMCE.init(conf);
+});
+          ');
           ?>
         </div>
 
@@ -369,26 +440,36 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
           <label class="form-label fw-bold" for="mb_footer">
             <?php echo __('Footer', 'mailblast'); ?>
           </label>
-          <?php
-          $mb_footer_rand = uniqid();
-          $mb_footer_id   = 'mb_footer_' . $mb_footer_rand;
-          echo '<textarea class="form-control" name="footer" id="' . $mb_footer_id . '" rows="5">'
-             . htmlspecialchars($savedForm['footer'], ENT_QUOTES, 'UTF-8')
-             . '</textarea>';
-          echo Html::initEditorSystem(
-              $mb_footer_id, $mb_footer_rand,
-              true,   // display
-              false,  // readonly
-              false,  // enable_images — no images in footer
-              120,    // editor_height (px)
-              [],     // add_body_classes
-              'top',  // toolbar_location
-              true,   // init
-              '',     // placeholder
-              true,   // toolbar
-              false   // statusbar ← removes the "1"
-          );
-          ?>
+          <!-- contenteditable footer — renders B/I/U visually, preserves line breaks.
+               A hidden textarea syncs the HTML value for form submission. -->
+          <div class="border rounded" style="overflow:hidden">
+            <div class="d-flex gap-1 p-1 border-bottom" id="mb_footerToolbar">
+              <button type="button" class="btn btn-sm btn-ghost-secondary fw-bold px-2" data-cmd="bold"
+                title="<?php echo htmlspecialchars(__('Bold', 'mailblast'), ENT_QUOTES); ?>"><b>N</b></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary fst-italic px-2" data-cmd="italic"
+                title="<?php echo htmlspecialchars(__('Italic', 'mailblast'), ENT_QUOTES); ?>"><i>C</i></button>
+              <button type="button" class="btn btn-sm btn-ghost-secondary px-2" data-cmd="underline"
+                title="<?php echo htmlspecialchars(__('Underline', 'mailblast'), ENT_QUOTES); ?>"
+                style="text-decoration:underline">S</button>
+            </div>
+            <div
+              id="mb_footerEdit"
+              contenteditable="true"
+              spellcheck="true"
+              class="p-2"
+              style="min-height:80px;outline:none;font-family:inherit;font-size:inherit;line-height:1.5;white-space:pre-wrap;word-break:break-word"
+            ><?php
+              // Convert saved HTML to safe contenteditable content
+              $footerHtml = $savedForm['footer'];
+              // Restore line breaks as <br> if not already present
+              if ($footerHtml !== '' && strpos($footerHtml, '<br') === false && strpos($footerHtml, '<p') === false) {
+                  $footerHtml = nl2br($footerHtml);
+              }
+              echo $footerHtml;
+            ?></div>
+            <!-- Hidden textarea synced on every change for form submission -->
+            <textarea name="footer" id="mb_footer" class="d-none"></textarea>
+          </div>
         </div>
 
         <hr class="my-4">
@@ -517,17 +598,21 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
           </div>
         </div>
 
-        <div id="mb_testEmailField" class="mb-3" style="display:none;max-width:380px">
+        <div id="mb_testEmailField" class="mb-3" style="display:none;max-width:480px">
           <label class="form-label fw-bold" for="mb_testEmail">
             <?php echo __('Test address', 'mailblast'); ?>
           </label>
           <input
             id="mb_testEmail"
-            type="email"
+            type="text"
             name="test_email"
             class="form-control"
-            placeholder="<?php echo htmlspecialchars(__('user@company.com', 'mailblast'), ENT_QUOTES); ?>"
+            placeholder="<?php echo htmlspecialchars(__('user@company.com, other@company.com', 'mailblast'), ENT_QUOTES); ?>"
+            autocomplete="off"
           >
+          <div class="form-text text-muted">
+            <?php echo __('Separate multiple addresses with commas. Maximum 5 addresses.', 'mailblast'); ?>
+          </div>
         </div>
 
         <div class="mb-4">
@@ -888,6 +973,40 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── Footer contenteditable toolbar ─────────────────────────────────────────
+  (function() {
+    const edit   = document.getElementById('mb_footerEdit');
+    const hidden = document.getElementById('mb_footer');
+    const toolbar = document.getElementById('mb_footerToolbar');
+    if (!edit || !hidden || !toolbar) return;
+
+    // Sync contenteditable → hidden textarea on every change
+    function syncFooter() {
+      hidden.value = edit.innerHTML;
+    }
+    edit.addEventListener('input', syncFooter);
+    // Initial sync
+    syncFooter();
+
+    // Enter key inserts <br> instead of <div> (cleaner HTML for email)
+    edit.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.execCommand('insertHTML', false, '<br>');
+      }
+    });
+
+    // B/I/U buttons use execCommand (works reliably with contenteditable)
+    toolbar.querySelectorAll('[data-cmd]').forEach(function(btn) {
+      btn.addEventListener('mousedown', function(e) {
+        e.preventDefault(); // keep focus in contenteditable
+        document.execCommand(btn.dataset.cmd, false, null);
+        syncFooter();
+        edit.focus();
+      });
+    });
+  }());
+
   // ── Test address toggle ────────────────────────────────────────────────
   const testMe       = document.getElementById('mb_testMe');
   const testSpecific = document.getElementById('mb_testSpecific');
@@ -1240,8 +1359,6 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
   // finishes initialising, giving the illusion of persistence.
 
   const SS_SUBJECT = 'mb_subject';
-  const SS_BODY    = 'mb_body';
-  const SS_FOOTER  = 'mb_footer';
 
   // Save subject field on every keystroke
   const subjectEl = document.getElementById('mb_subject');
@@ -1268,75 +1385,11 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
   // The handler converts every pasted/dropped/inserted image to an inline
   // base64 data-URI so nothing is sent to glpi_documents or the filesystem.
 
-  // GLPI 11 ships TinyMCE 6.  Override the images_upload_handler so every
-  // pasted / dropped / inserted image is converted to an inline base64 data-URI
-  // in the browser — no request ever reaches glpi_documents.
-  function installBase64ImageHandler(editor) {
-    try {
-      const handler = (blobInfo) =>
-        Promise.resolve('data:' + blobInfo.blob().type + ';base64,' + blobInfo.base64());
 
-      editor.options.set('images_upload_handler', handler);
-      editor.options.set('images_upload_url', ''); // disable URL fallback
-    } catch (_) {}
-  }
 
-  if (typeof tinymce !== 'undefined') {
-    // Hook editors that may already exist (e.g. fast page load)
-    tinymce.editors.forEach(installBase64ImageHandler);
-    // Hook every future editor the moment it is created
-    tinymce.on('AddEditor', function (e) {
-      installBase64ImageHandler(e.editor);
-    });
-  }
-
-  // ── Wait for body + footer editors, then restore sessionStorage content ──
-  // Capture the server-rendered textarea values BEFORE TinyMCE initialises
-  // (TinyMCE may clear the textarea during init in GLPI 11).
-  // These are the fallback values when sessionStorage has nothing.
-  const _serverFooter = (function() {
-    const el = document.querySelector('textarea[name="footer"]');
-    return el ? el.value : '';
-  }());
-
-  function waitForEditors(cb, limit) {
-    limit = limit || 60;  // max 6 s
-    if (typeof tinymce !== 'undefined' && tinymce.editors.length >= 2) {
-      cb(tinymce.editors);
-    } else if (limit > 0) {
-      setTimeout(() => waitForEditors(cb, limit - 1), 100);
-    }
-  }
-
-  waitForEditors(function(editors) {
-    // editors[0] = body,  editors[1] = footer  (GLPI renders in DOM order)
-    const bodyEditor   = editors[0];
-    const footerEditor = editors[1];
-
-    // Restore from sessionStorage if available; otherwise fall back to the
-    // server-persisted value captured above (subject to TinyMCE clearing it).
-    try {
-      const savedBody = sessionStorage.getItem(SS_BODY);
-      if (savedBody !== null && savedBody !== '') {
-        bodyEditor.setContent(savedBody);
-      }
-      const savedFooter = sessionStorage.getItem(SS_FOOTER);
-      if (savedFooter !== null && savedFooter !== '') {
-        footerEditor.setContent(savedFooter);
-      } else if (_serverFooter !== '') {
-        // No sessionStorage value — restore what the server sent
-        footerEditor.setContent(_serverFooter);
-      }
-    } catch(_) {}
-
-    // Auto-save on every content change
-    bodyEditor.on('input keyup change SetContent', function() {
-      try { sessionStorage.setItem(SS_BODY, bodyEditor.getContent()); } catch(_) {}
-    });
-    footerEditor.on('input keyup change SetContent', function() {
-      try { sessionStorage.setItem(SS_FOOTER, footerEditor.getContent()); } catch(_) {}
-    });
-  });
+  // Footer is restored server-side from glpi_configs ($savedForm['footer']).
+  // Body is intentionally not persisted — it may contain large base64 images.
+  // No setContent() calls — they caused formatting loss on every poll cycle.
 
 }());
 </script>

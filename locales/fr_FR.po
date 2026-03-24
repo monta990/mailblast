@@ -199,3 +199,21 @@ msgstr "Impossible de démarrer l'envoi"
 
 msgid "Batch failed"
 msgstr "Échec du lot"
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr "Texte brut. Le gras, l italique et le soulignement sont pris en charge."
+
+msgid "Bold"
+msgstr "Gras"
+
+msgid "Italic"
+msgstr "Italique"
+
+msgid "Underline"
+msgstr "Souligné"
+
+msgid "user@company.com, other@company.com"
+msgstr "utilisateur@entreprise.com, autre@entreprise.com"
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr "Séparez plusieurs adresses par des virgules. Maximum 5 adresses."

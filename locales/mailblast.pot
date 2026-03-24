@@ -203,3 +203,21 @@ msgstr ""
 
 msgid "Batch failed"
 msgstr ""
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr ""
+
+msgid "Bold"
+msgstr ""
+
+msgid "Italic"
+msgstr ""
+
+msgid "Underline"
+msgstr ""
+
+msgid "user@company.com, other@company.com"
+msgstr ""
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr ""

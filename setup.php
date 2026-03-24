@@ -6,7 +6,7 @@
  * @license GPL-2.0-or-later
  */
 
-define('PLUGIN_MAILBLAST_VERSION',  '1.0.3');
+define('PLUGIN_MAILBLAST_VERSION',  '1.4.0');
 define('PLUGIN_MAILBLAST_MIN_GLPI', '11.0.0');
 define('PLUGIN_MAILBLAST_MAX_GLPI', '11.99.99');
 
@@ -19,11 +19,14 @@ function plugin_version_mailblast(): array
         'version'      => PLUGIN_MAILBLAST_VERSION,
         'author'       => 'Edwin Elias Alvarez',
         'license'      => 'GPL v2+',
-        'homepage'     => '',
+        'homepage'     => 'https://github.com/monta990/mailblast',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_MAILBLAST_MIN_GLPI,
                 'max' => PLUGIN_MAILBLAST_MAX_GLPI,
+            ],
+            'php'  => [
+                'min' => '8.2',
             ],
         ],
     ];

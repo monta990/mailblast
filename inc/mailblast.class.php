@@ -142,52 +142,7 @@ class PluginMailblastMailblast extends CommonGLPI
         ];
     }
 
-    // ─── Upload validation ────────────────────────────────────────────────
 
-    public static function validateUploadedFiles(array $filesEntry, array $allowedMimes): array
-    {
-        $accepted = [];
-        $rejected = [];
-
-        // Attachments always arrive as array (name="attachments[]").
-        $count = is_array($filesEntry['name']) ? count($filesEntry['name']) : 0;
-
-        for ($i = 0; $i < $count; $i++) {
-            $name  = $filesEntry['name'][$i]     ?? '';
-            $tmp   = $filesEntry['tmp_name'][$i] ?? '';
-            $error = $filesEntry['error'][$i]    ?? UPLOAD_ERR_NO_FILE;
-            $size  = $filesEntry['size'][$i]     ?? 0;
-
-            if ($error === UPLOAD_ERR_NO_FILE || $tmp === '' || $name === '') {
-                continue;
-            }
-
-            if ($error !== UPLOAD_ERR_OK) {
-                $rejected[] = sprintf(__('Upload error code %d', 'mailblast'), $error);
-                continue;
-            }
-
-            $realMime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
-
-            if (!empty($allowedMimes) && !in_array($realMime, $allowedMimes, true)) {
-                $rejected[] = sprintf(
-                    __('%1$s: MIME type %2$s is not allowed by GLPI', 'mailblast'),
-                    basename($name),
-                    $realMime
-                );
-                continue;
-            }
-
-            $accepted[] = [
-                'tmp'  => $tmp,
-                'name' => basename($name),
-                'mime' => $realMime,
-                'size' => (int) $size,
-            ];
-        }
-
-        return ['accepted' => $accepted, 'rejected' => $rejected];
-    }
 
     // ─── Queue management ─────────────────────────────────────────────────
     //
@@ -415,12 +370,13 @@ class PluginMailblastMailblast extends CommonGLPI
     // ─── Image embedding ─────────────────────────────────────────────────
 
     /**
-     * Converts any remaining GLPI-document img src values to inline base64 URIs,
-     * then hard-deletes the document record and file from the server.
+     * Converts any GLPI-document img src values to inline base64 URIs and
+     * immediately deletes the document record and file from the server.
      *
-     * This is a safety net.  The TinyMCE images_upload_handler in send.php
-     * already converts images to base64 in the browser before they are posted,
-     * so this code path should rarely fire in normal use.
+     * Images inserted via TinyMCE are uploaded to glpi_documents for the
+     * duration of composition. Once embedded as base64 in the email body they
+     * serve no further purpose — leaving them orphaned in glpi_documents would
+     * accumulate indefinitely with no way to identify them manually.
      */
     public static function embedImagesAsBase64(string $html): string
     {
@@ -436,12 +392,35 @@ class PluginMailblastMailblast extends CommonGLPI
                     return $m[0];
                 }
 
-                // Do NOT purge the document — the user may reuse it elsewhere.
-                // Embedding as base64 is sufficient; the file stays in glpi_documents.
+                // Delete the document now that it is embedded as base64.
+                // It was uploaded solely for composing this email and would
+                // otherwise remain as an orphan in glpi_documents indefinitely.
+                self::purgeDocument($docId);
+
                 return $m[1] . $embedded . $m[4];
             },
             $html
         );
+    }
+
+    private static function purgeDocument(int $docId): void
+    {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT' => ['filepath'],
+            'FROM'   => 'glpi_documents',
+            'WHERE'  => ['id' => $docId],
+        ]);
+
+        if ($iterator->count()) {
+            $fullPath = GLPI_DOC_DIR . '/' . $iterator->current()['filepath'];
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
+
+        $DB->delete('glpi_documents', ['id' => $docId]);
     }
 
     private static function docIdToBase64(int $docId): ?string
@@ -614,6 +593,9 @@ class PluginMailblastMailblast extends CommonGLPI
             $attachments
         );
 
+        // Test mode: single hardcoded recipient — no DB query needed.
+        // Production: use getActiveUsersWithEmail() (processBatch handles
+        // the LIMIT/OFFSET variant for mass sends via the queue).
         $recipients = $testMode
             ? [['email' => $testEmail, 'name' => 'Test']]
             : self::getActiveUsersWithEmail();
@@ -643,9 +625,7 @@ class PluginMailblastMailblast extends CommonGLPI
                 $errors[] = $toEmail . ': ' . $err;
             }
 
-            if (!$testMode) {
-                usleep(120_000); // 120 ms between sends — avoid SMTP rate limits
-            }
+
         }
 
         return ['sent' => $sent, 'errors' => $errors, 'total' => count($recipients)];

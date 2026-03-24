@@ -26,16 +26,6 @@ function plugin_mailblast_uninstall(): bool
         $DB->delete('glpi_configs', ['context' => 'plugin:mailblast']);
     }
 
-    // Filesystem cleanup — no SQL involved
-    $tmpBase = GLPI_TMP_DIR . '/mailblast_attachments';
-    if (is_dir($tmpBase)) {
-        foreach (glob($tmpBase . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
-            array_map('unlink', glob($dir . '/*') ?: []);
-            @rmdir($dir);
-        }
-        @rmdir($tmpBase);
-    }
-
     return true;
 }
 
