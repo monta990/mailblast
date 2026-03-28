@@ -1,7 +1,8 @@
 # Changelog — Mail Blast
 
-All notable changes to this plugin are documented here.
-Dates follow **GMT-7 (Hermosillo)**.
+All notable changes to this project are documented in this file.
+Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
