@@ -5,7 +5,7 @@
  * Requires GLPI 11.0+.
  *
  * @author  Edwin Elias Alvarez
- * @license GPL-2.0-or-later
+ * @license GPL-3.0-or-later
  */
 
 class PluginMailblastMailblast extends CommonGLPI

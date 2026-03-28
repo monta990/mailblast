@@ -71,7 +71,7 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
       <lang>fr_FR</lang>
       <lang>de_DE</lang>
    </langs>
-   <license>GPL v2+</license>
+   <license>GPL v3+</license>
    <tags>
       <en>
          <tag>email</tag>

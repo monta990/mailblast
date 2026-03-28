@@ -3,7 +3,7 @@
  * Mail Blast — GLPI plugin for bulk email to all registered users.
  *
  * @author  Edwin Elias Alvarez
- * @license GPL-2.0-or-later
+ * @license GPL-3.0-or-later
  */
 
 define('PLUGIN_MAILBLAST_VERSION',  '1.4.0');
@@ -18,7 +18,7 @@ function plugin_version_mailblast(): array
         'name'         => 'Mail Blast',
         'version'      => PLUGIN_MAILBLAST_VERSION,
         'author'       => 'Edwin Elias Alvarez',
-        'license'      => 'GPL v2+',
+        'license'      => 'GPL v3+',
         'homepage'     => 'https://github.com/monta990/mailblast',
         'requirements' => [
             'glpi' => [

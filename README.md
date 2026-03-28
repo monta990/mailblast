@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue" alt="GLPI compatibility"></a>
-  <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v2%2B-green" alt="License"></a>
-  <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple" alt="PHP"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility"></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v3%2B-green?style=flat-square" alt="License"></a>
+  <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP"></a>
   <a href="https://github.com/monta990/mailblast/releases" target="_blank"><img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/monta990/mailblast/total"></a>
 </p>
 
@@ -152,7 +152,7 @@ If you like my work, you can support me by a donate here:
 
 ## License
 
-GPL v2 or later. See [LICENSE](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+GPL v3 or later. See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.html).
 
 ## Issues
 
@@ -171,9 +171,9 @@ Report bugs or request features on the [issue tracker](https://github.com/monta9
 </p>
 
 <p align="center">
-  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue" alt="GLPI compatibility"></a>
-  <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v2%2B-green" alt="License"></a>
-  <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple" alt="PHP"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility"></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v3%2B-green?style=flat-square" alt="License"></a>
+  <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP"></a>
   <a href="https://github.com/monta990/mailblast/releases" target="_blank"><img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/monta990/mailblast/total"></a>
 </p>
 
@@ -314,7 +314,7 @@ Si te gusta mi trabajo, me puedes apoyar con una donación:
 
 ## Licencia
 
-GPL v2 o posterior. Ver [LICENSE](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+GPL v3 o posterior. Ver [LICENSE](https://www.gnu.org/licenses/gpl-3.0.html).
 
 ## Problemas
 
