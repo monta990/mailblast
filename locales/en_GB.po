@@ -262,3 +262,6 @@ msgstr "Back to Mail Blast"
 
 msgid "Sending"
 msgstr "Sending"
+
+msgid "Maximum combined attachment size"
+msgstr "Maximum combined attachment size"

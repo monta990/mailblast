@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.1] — 2026-04-04
+
+### Fixed
+
+- **Configuration page save failed with `AccessDeniedHttpException`** — GLPI 11
+  validates CSRF automatically on every POST when `csrf_compliant = true` is set
+  in `setup.php`. Calling `Session::checkCSRF($_POST)` manually was a double
+  validation; the token was already consumed by GLPI's middleware before the
+  plugin code ran, causing every save to throw an access denied error.
+  Removed the manual call — GLPI's automatic validation is sufficient.
+
+---
+
 ## [1.5.0] — 2026-03-23
 
 ### Added

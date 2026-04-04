@@ -23,7 +23,9 @@ $errors = [];
 
 // ── Handle save ──────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    Session::checkCSRF($_POST);
+    // CSRF is validated automatically by GLPI 11 via the csrf_compliant hook
+    // in setup.php — calling Session::checkCSRF() manually causes a double
+    // validation failure because the token is consumed on the first check.
 
     $batchSize     = (int) ($_POST['batch_size']      ?? 15);
     $batchDelay    = (int) ($_POST['batch_delay_ms']  ?? 120);

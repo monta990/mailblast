@@ -564,7 +564,13 @@ $(function() {
         </div>
 
         <!-- Attached file list -->
-        <ul id="mb_fileList" class="list-group mb-4" style="display:none!important"></ul>
+        <ul id="mb_fileList" class="list-group mb-2" style="display:none!important"></ul>
+
+        <p class="small text-muted mb-4">
+          <i class="ti ti-weight me-1"></i>
+          <?php echo __('Maximum combined attachment size', 'mailblast'); ?>:
+          <strong><?php echo (int) $cfgMaxAttMb; ?> MB</strong>
+        </p>
 
         <hr class="my-4">
 

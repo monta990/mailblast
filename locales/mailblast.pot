@@ -266,3 +266,6 @@ msgstr ""
 
 msgid "Sending"
 msgstr ""
+
+msgid "Maximum combined attachment size"
+msgstr ""

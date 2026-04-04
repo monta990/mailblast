@@ -262,3 +262,6 @@ msgstr "Retour à Mail Blast"
 
 msgid "Sending"
 msgstr "Envoi"
+
+msgid "Maximum combined attachment size"
+msgstr "Taille combinée maximale des pièces jointes"
