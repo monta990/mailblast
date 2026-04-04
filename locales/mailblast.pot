@@ -221,3 +221,48 @@ msgstr ""
 
 msgid "Separate multiple addresses with commas. Maximum 5 addresses."
 msgstr ""
+
+msgid "Mail Blast — Configuration"
+msgstr ""
+
+msgid "Configuration"
+msgstr ""
+
+msgid "Settings saved successfully."
+msgstr ""
+
+msgid "Batch size"
+msgstr ""
+
+msgid "Delay between batches (ms)"
+msgstr ""
+
+msgid "Maximum total attachment size (MB)"
+msgstr ""
+
+msgid "Number of emails sent per batch (1–100). Default: 15. Lower values reduce SMTP load; higher values speed up sending."
+msgstr ""
+
+msgid "Milliseconds to wait between batches (0–5000). Default: 120. Increase this if your SMTP server enforces rate limits."
+msgstr ""
+
+msgid "Maximum combined size of all attached files (1–100 MB). Default: 15 MB. Files exceeding this limit will be rejected in the browser before upload."
+msgstr ""
+
+msgid "Batch size must be between 1 and 100."
+msgstr ""
+
+msgid "Batch delay must be between 0 and 5000 ms."
+msgstr ""
+
+msgid "Maximum attachment size must be between 1 and 100 MB."
+msgstr ""
+
+msgid "Attachment size limit exceeded (%s MB max). File not added: %s"
+msgstr ""
+
+msgid "Back to Mail Blast"
+msgstr ""
+
+msgid "Sending"
+msgstr ""

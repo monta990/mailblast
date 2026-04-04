@@ -101,7 +101,48 @@ class PluginMailblastMailblast extends CommonGLPI
 
     public static function countActiveUsersWithEmail(): int
     {
-        return count(self::getActiveUsersWithEmail());
+        global $DB;
+
+        $result = $DB->request([
+            'COUNT'     => 'cpt',
+            'FROM'      => 'glpi_useremails AS ue',
+            'LEFT JOIN' => [
+                'glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']],
+            ],
+            'WHERE' => [
+                'ue.is_default' => 1,
+                'u.is_deleted'  => 0,
+                'u.is_active'   => 1,
+                'NOT'           => ['ue.email' => ''],
+            ],
+        ]);
+
+        return (int) ($result->current()['cpt'] ?? 0);
+    }
+
+    // ─── Plugin configuration ────────────────────────────────────────────
+
+    public static function getBatchSize(): int
+    {
+        $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['batch_size']);
+        $v   = (int) ($cfg['batch_size'] ?? 0);
+        return ($v >= 1 && $v <= 100) ? $v : 15;
+    }
+
+    public static function getBatchDelayMs(): int
+    {
+        $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['batch_delay_ms']);
+        // Use -1 as sentinel: if key is not in DB yet, ?? returns -1 which
+        // fails the >= 0 check and the default 120 is returned instead.
+        $v   = (int) ($cfg['batch_delay_ms'] ?? -1);
+        return ($v >= 0 && $v <= 5000) ? $v : 120;
+    }
+
+    public static function getMaxAttachmentMb(): int
+    {
+        $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['max_attachment_mb']);
+        $v   = (int) ($cfg['max_attachment_mb'] ?? 0);
+        return ($v >= 1 && $v <= 100) ? $v : 15;
     }
 
     // ─── GLPI allowed document types ─────────────────────────────────────
@@ -312,7 +353,12 @@ class PluginMailblastMailblast extends CommonGLPI
         }
 
         $nextOffset = $offset + $batchSize;
-        $done       = ($nextOffset >= $total) || ($iterator->count() < $batchSize);
+        // Use actual row count returned as the authoritative signal — if fewer
+        // rows came back than requested, we are at the end regardless of $total.
+        // This handles users being activated/deactivated mid-send gracefully.
+        $done = ($iterator->count() < $batchSize);
+        // Also stop if we've passed the originally stored total (safety cap).
+        if (!$done && $total > 0 && $nextOffset >= $total) $done = true;
 
         if ($done) {
             self::cleanupJob($sendId);
@@ -380,7 +426,7 @@ class PluginMailblastMailblast extends CommonGLPI
      */
     public static function embedImagesAsBase64(string $html): string
     {
-        $pattern = '/(<img[^>]+src=["\'])([^"\']*document\.send\.php[^"\']*docid=(\d+)[^"\']*?)(["\'][^>]*>)/i';
+        $pattern = "/(<img[^>]+src=[\"'])([^\"']*?docid=(\\d+)[^\"']*?)([\"'][^>]*>)/i";
 
         return preg_replace_callback(
             $pattern,
@@ -538,19 +584,29 @@ class PluginMailblastMailblast extends CommonGLPI
     /** Converts HTML to plain text for the email AltBody. */
     public static function html2text(string $html): string
     {
-        $text = str_replace(
-            ['<br>', '<br/>', '<br />', '</p>', '</div>', '</h1>', '</h2>', '</h3>', '</li>'],
-            "\n",
-            $html
-        );
+        // Block-level elements → newlines before stripping tags
+        $text = preg_replace('/<br\s*\/?>/i',          "\n",       $html);
+        $text = preg_replace('/<\/p>/i',                "\n\n",    $text);
+        $text = preg_replace('/<\/(?:div|section)>/i',  "\n",       $text);
+        $text = preg_replace('/<hr[^>]*>/i',             "\n---\n", $text);
+        $text = preg_replace('/<\/h[1-6]>/i',           "\n\n",    $text);
+        $text = preg_replace('/<h[1-6][^>]*>/i',         "\n",       $text);
+        $text = preg_replace('/<\/tr>/i',               "\n",       $text);
+        $text = preg_replace('/<\/li>/i',               "\n",       $text);
+        $text = preg_replace('/<li[^>]*>/i',             "  • ",      $text);
+
+        // Strip remaining tags, then decode entities
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+
+        // Normalise whitespace
+        $text = preg_replace('/[ \t]+/', ' ',        $text);
+        $text = preg_replace('/\n{3,}/', "\n\n",   $text);
 
         return trim($text);
     }
 
-    /** Appends the HTML footer to the body and returns the final HTML. */
+    /** Appends the HTML footer to the body and returns a well-formed HTML email. */
     public static function buildHtmlBody(string $htmlBody, string $footer): string
     {
         if (trim(strip_tags($footer)) !== '') {
@@ -561,7 +617,15 @@ class PluginMailblastMailblast extends CommonGLPI
                 . '</div>';
         }
 
-        return $htmlBody;
+        // Wrap in a minimal but valid HTML5 document so email clients
+        // interpret charset and base font correctly.
+        return '<!DOCTYPE html>'
+            . '<html><head>'
+            . '<meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '</head><body style="margin:0;padding:16px;font-family:sans-serif;font-size:14px;line-height:1.6;color:#333333">'
+            . $htmlBody
+            . '</body></html>';
     }
 
     // ─── Send logic ───────────────────────────────────────────────────────
@@ -593,12 +657,8 @@ class PluginMailblastMailblast extends CommonGLPI
             $attachments
         );
 
-        // Test mode: single hardcoded recipient — no DB query needed.
-        // Production: use getActiveUsersWithEmail() (processBatch handles
-        // the LIMIT/OFFSET variant for mass sends via the queue).
-        $recipients = $testMode
-            ? [['email' => $testEmail, 'name' => 'Test']]
-            : self::getActiveUsersWithEmail();
+        // sendMails is only called for test sends — single recipient always.
+        $recipients = [['email' => $testEmail, 'name' => 'Test']];
 
         $sent   = 0;
         $errors = [];

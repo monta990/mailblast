@@ -217,3 +217,48 @@ msgstr "utilisateur@entreprise.com, autre@entreprise.com"
 
 msgid "Separate multiple addresses with commas. Maximum 5 addresses."
 msgstr "Séparez plusieurs adresses par des virgules. Maximum 5 adresses."
+
+msgid "Mail Blast — Configuration"
+msgstr "Mail Blast — Configuration"
+
+msgid "Configuration"
+msgstr "Configuration"
+
+msgid "Settings saved successfully."
+msgstr "Paramètres enregistrés avec succès."
+
+msgid "Batch size"
+msgstr "Taille du lot"
+
+msgid "Delay between batches (ms)"
+msgstr "Délai entre les lots (ms)"
+
+msgid "Maximum total attachment size (MB)"
+msgstr "Taille totale maximale des pièces jointes (Mo)"
+
+msgid "Number of emails sent per batch (1–100). Default: 15. Lower values reduce SMTP load; higher values speed up sending."
+msgstr "Nombre d'e-mails envoyés par lot (1–100). Défaut : 15. Des valeurs plus basses réduisent la charge SMTP."
+
+msgid "Milliseconds to wait between batches (0–5000). Default: 120. Increase this if your SMTP server enforces rate limits."
+msgstr "Millisecondes d'attente entre les lots (0–5000). Défaut : 120. Augmentez si votre serveur SMTP applique des limites de débit."
+
+msgid "Maximum combined size of all attached files (1–100 MB). Default: 15 MB. Files exceeding this limit will be rejected in the browser before upload."
+msgstr "Taille combinée maximale de tous les fichiers joints (1–100 Mo). Défaut : 15 Mo. Les fichiers dépassant cette limite seront rejetés dans le navigateur."
+
+msgid "Batch size must be between 1 and 100."
+msgstr "La taille du lot doit être comprise entre 1 et 100."
+
+msgid "Batch delay must be between 0 and 5000 ms."
+msgstr "Le délai de lot doit être compris entre 0 et 5000 ms."
+
+msgid "Maximum attachment size must be between 1 and 100 MB."
+msgstr "La taille maximale des pièces jointes doit être comprise entre 1 et 100 Mo."
+
+msgid "Attachment size limit exceeded (%s MB max). File not added: %s"
+msgstr "Limite de taille des pièces jointes dépassée (%s Mo max). Fichier non ajouté : %s"
+
+msgid "Back to Mail Blast"
+msgstr "Retour à Mail Blast"
+
+msgid "Sending"
+msgstr "Envoi"

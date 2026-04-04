@@ -5,8 +5,7 @@
  * @author  Edwin Elias Alvarez
  * @license GPL-3.0-or-later
  */
-
-define('PLUGIN_MAILBLAST_VERSION',  '1.4.0');
+define('PLUGIN_MAILBLAST_VERSION',  '1.5.0');
 define('PLUGIN_MAILBLAST_MIN_GLPI', '11.0.0');
 define('PLUGIN_MAILBLAST_MAX_GLPI', '11.99.99');
 
@@ -68,7 +67,7 @@ function plugin_init_mailblast(): void
 
     // ── Gear icon in Setup → Plugins list ────────────────────────────────
     // This is the hook that makes the wrench/gear icon appear and clickable.
-    $PLUGIN_HOOKS['config_page']['mailblast'] = 'front/send.php';
+    $PLUGIN_HOOKS['config_page']['mailblast'] = 'front/config.php';
 
     // ── Administration menu entry ─────────────────────────────────────────
     if (Session::haveRight('config', UPDATE)) {

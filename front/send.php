@@ -175,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, 15);
+        $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, PluginMailblastMailblast::getBatchSize());
         $result['csrf'] = Session::getNewCSRFToken();
         ob_end_clean();
         header('Content-Type: application/json');
@@ -309,7 +309,10 @@ Html::displayMessageAfterRedirect();
 $docTypes   = PluginMailblastMailblast::getAllowedDocumentTypes();
 $userCount  = PluginMailblastMailblast::countActiveUsersWithEmail();
 $myEmail    = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
-$savedForm  = PluginMailblastMailblast::loadFormConfig();
+$savedForm     = PluginMailblastMailblast::loadFormConfig();
+$cfgBatchSize  = PluginMailblastMailblast::getBatchSize();
+$cfgBatchDelay = PluginMailblastMailblast::getBatchDelayMs();
+$cfgMaxAttMb   = PluginMailblastMailblast::getMaxAttachmentMb();
 
 $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 
@@ -317,11 +320,17 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
 <div class="container-fluid">
   <div class="card mb-4">
 
-    <div class="card-header">
-      <h3 class="card-title">
+    <div class="card-header d-flex align-items-center">
+      <h3 class="card-title mb-0">
         <i class="ti ti-mail-forward me-2"></i>
         <?php echo __('Send bulk email', 'mailblast'); ?>
       </h3>
+      <?php if (Session::haveRight('config', UPDATE)): ?>
+      <a href="<?php echo Plugin::getWebDir('mailblast'); ?>/front/config.php"
+         class="btn btn-sm btn-outline-secondary ms-auto">
+        <i class="ti ti-settings me-1"></i><?php echo __('Configuration', 'mailblast'); ?>
+      </a>
+      <?php endif; ?>
     </div>
 
     <div class="card-body">
@@ -865,6 +874,10 @@ $(function() {
     queueBatchFail:  <?php echo json_encode(__('Batch failed',           'mailblast')); ?>,
   };
 
+  // Config values from PHP
+  const _mbBatchDelay = <?php echo (int) $cfgBatchDelay; ?>;
+  const _mbMaxAttMb   = <?php echo (int) $cfgMaxAttMb; ?>;
+
   // ── File management ────────────────────────────────────────────────────
   const input    = document.getElementById('mb_fileInput');
   const dropZone = document.getElementById('mb_dropZone');
@@ -895,13 +908,24 @@ $(function() {
     input.value = ''; // allow re-selecting same file
   });
 
+  function totalAttachmentSize() {
+    return [...selectedFiles.files].reduce((sum, f) => sum + f.size, 0);
+  }
+
   function mergeFiles(newFiles) {
+    const limitBytes = _mbMaxAttMb * 1024 * 1024;
     for (const f of newFiles) {
       // Deduplicate by name+size
       const dup = [...selectedFiles.files].some(
         x => x.name === f.name && x.size === f.size
       );
-      if (!dup) selectedFiles.items.add(f);
+      if (dup) continue;
+      if (totalAttachmentSize() + f.size > limitBytes) {
+        const msg = <?php echo json_encode(__('Attachment size limit exceeded (%s MB max). File not added: %s', 'mailblast')); ?>;
+        alert(msg.replace('%s', _mbMaxAttMb).replace('%s', f.name));
+        continue;
+      }
+      selectedFiles.items.add(f);
     }
     syncInput();
     renderList();
@@ -1160,7 +1184,11 @@ $(function() {
           if (data.done || _cancelled) {
             finish();
           } else {
-            processNext(data.next_offset);
+            if (_mbBatchDelay > 0) {
+              setTimeout(function() { processNext(data.next_offset); }, _mbBatchDelay);
+            } else {
+              processNext(data.next_offset);
+            }
           }
         },
         function(err) { finish(err); }
