@@ -37,6 +37,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | **Attachment size limit** | Configurable maximum combined attachment size (default 15 MB); enforced in the browser before any upload |
 | **GLPI MIME validation** | Only file types allowed by GLPI's document type config are accepted |
 | **Test send** | Send to your admin address or up to 5 comma-separated addresses before the mass mailing |
+| **Sending report (XLSX)** | Download a formatted Excel report after every send with date, subject, email, status and reason for each recipient |
 | **AJAX progress modal** | Real-time progress bar, sent / errors / pending counters, elapsed time, per-address error list |
 | **Cancel mid-send** | Two-click cancel button stops the queue at the next batch |
 | **Queue-based sending** | Recipients processed in configurable batches; the browser never freezes |
@@ -234,6 +235,7 @@ Sin servicios externos. Sin tareas cron. Sin dependencias adicionales más allá
 | **Límite de adjuntos** | Tamaño máximo total de adjuntos configurable (predeterminado 15 MB); validado en el navegador antes de cualquier envío |
 | **Validación MIME de GLPI** | Solo se aceptan los tipos de archivo permitidos por la configuración de tipos de documentos de GLPI |
 | **Correo de prueba** | Envía a tu dirección o hasta 5 direcciones separadas por comas antes del envío masivo |
+| **Informe de envío (XLSX)** | Descarga un informe Excel formateado tras cada envío con fecha, asunto, correo, estado y motivo por destinatario |
 | **Modal de progreso AJAX** | Barra de progreso en tiempo real, contadores de enviados / errores / pendientes, tiempo transcurrido |
 | **Cancelar a mitad de envío** | Botón de cancelar de dos clics detiene la cola en el siguiente lote |
 | **Envío por cola** | Destinatarios procesados en lotes configurables; el navegador nunca se congela |

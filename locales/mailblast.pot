@@ -269,3 +269,69 @@ msgstr ""
 
 msgid "Maximum combined attachment size"
 msgstr ""
+
+msgid "Image not inserted: combined size would exceed the %s MB limit set in Configuration."
+msgstr ""
+
+msgid "Download report"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Reason"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Generating…"
+msgstr ""
+
+msgid "Mail Blast sending report"
+msgstr ""
+
+msgid "Report"
+msgstr ""
+
+msgid "active recipients"
+msgstr ""
+
+msgid "Clear form"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Email preview"
+msgstr ""
+
+msgid "Recent sends"
+msgstr ""
+
+msgid "Sending failed — no emails were delivered."
+msgstr ""
+
+msgid "All emails sent successfully."
+msgstr ""
+
+msgid "sent"
+msgstr ""
+
+msgid "failed"
+msgstr ""
+
+msgid "Available placeholders: {nombre}, {nombre_completo}, {email}"
+msgstr ""
+
+msgid "Last 5 mass sends"
+msgstr ""
+
+msgid "No sends recorded yet. History is populated after each mass mailing."
+msgstr ""

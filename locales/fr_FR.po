@@ -265,3 +265,69 @@ msgstr "Envoi"
 
 msgid "Maximum combined attachment size"
 msgstr "Taille combinée maximale des pièces jointes"
+
+msgid "Image not inserted: combined size would exceed the %s MB limit set in Configuration."
+msgstr "Image non insérée : la taille combinée dépasserait la limite de %s Mo définie dans la configuration."
+
+msgid "Download report"
+msgstr "Télécharger le rapport"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Reason"
+msgstr "Motif"
+
+msgid "Failed"
+msgstr "Échoué"
+
+msgid "Generating…"
+msgstr "Génération…"
+
+msgid "Mail Blast sending report"
+msgstr "Rapport d'envoi Mail Blast"
+
+msgid "Report"
+msgstr "Rapport"
+
+msgid "active recipients"
+msgstr "destinataires actifs"
+
+msgid "Clear form"
+msgstr "Effacer le formulaire"
+
+msgid "Preview"
+msgstr "Aperçu"
+
+msgid "Email preview"
+msgstr "Aperçu du courriel"
+
+msgid "Recent sends"
+msgstr "Envois récents"
+
+msgid "Sending failed — no emails were delivered."
+msgstr "Échec — aucun e-mail livré."
+
+msgid "All emails sent successfully."
+msgstr "Tous les e-mails ont été envoyés avec succès."
+
+msgid "sent"
+msgstr "envoyés"
+
+msgid "failed"
+msgstr "échoués"
+
+msgid "Available placeholders: {nombre}, {nombre_completo}, {email}"
+msgstr "Variables disponibles : {nombre}, {nombre_completo}, {email}"
+
+msgid "Last 5 mass sends"
+msgstr "5 derniers envois massifs"
+
+msgid "No sends recorded yet. History is populated after each mass mailing."
+msgstr "Aucun envoi enregistré. L'historique est rempli après chaque envoi massif."

@@ -69,6 +69,11 @@ Html::header(
   <div class="d-flex align-items-center mb-4 gap-2">
     <i class="ti ti-settings fs-3 text-primary"></i>
     <h2 class="mb-0"><?php echo __('Mail Blast — Configuration', 'mailblast'); ?></h2>
+    <span class="ms-auto badge bg-primary fs-6">
+      <i class="ti ti-users me-1"></i>
+      <?php echo PluginMailblastMailblast::countActiveUsersWithEmail(); ?>
+      <?php echo __('active recipients', 'mailblast'); ?>
+    </span>
   </div>
 
   <?php if ($saved): ?>
@@ -161,6 +166,48 @@ Html::header(
     </div>
 
   </form>
+
+  <?php $history = PluginMailblastMailblast::getHistory(); ?>
+  <div class="card mt-4">
+    <div class="card-header fw-bold">
+      <i class="ti ti-history me-1"></i><?php echo __('Recent sends', 'mailblast'); ?>
+      <span class="text-muted fw-normal small ms-2"><?php echo __('Last 5 mass sends', 'mailblast'); ?></span>
+    </div>
+    <div class="card-body p-0">
+      <?php if (empty($history)): ?>
+        <p class="text-muted p-3 mb-0">
+          <i class="ti ti-info-circle me-1"></i>
+          <?php echo __('No sends recorded yet. History is populated after each mass mailing.', 'mailblast'); ?>
+        </p>
+      <?php else: ?>
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead>
+              <tr>
+                <th><?php echo __('Date', 'mailblast'); ?></th>
+                <th><?php echo __('Subject', 'mailblast'); ?></th>
+                <th class="text-success text-end"><?php echo __('Sent', 'mailblast'); ?></th>
+                <th class="text-danger text-end"><?php echo __('Failed', 'mailblast'); ?></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($history as $h): ?>
+              <tr>
+                <td class="text-muted small"><?php echo htmlspecialchars($h['date'], ENT_QUOTES); ?></td>
+                <td><?php echo htmlspecialchars($h['subject'], ENT_QUOTES); ?></td>
+                <td class="text-success fw-bold text-end"><?php echo (int)$h['sent']; ?></td>
+                <td class="text-end <?php echo (int)$h['errors'] > 0 ? 'text-danger fw-bold' : 'text-muted'; ?>">
+                  <?php echo (int)$h['errors']; ?>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
+
 </div><!-- /container-fluid -->
 <?php
 Html::footer();

@@ -6,6 +6,56 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.0] — 2026-04-05
+
+### Added
+
+- **Sending report — XLSX** — a **Download report** button (green, Excel icon)
+appears in the progress modal after every send. Clicking it POSTs the accumulated
+send data to a `generate_report` PHP action that builds a proper XLSX file using
+GLPI's bundled `phpoffice/phpspreadsheet ^5.1`.
+The workbook includes: Date, Subject, Email, Status (Sent / Failed), Reason. Header row is bold with a blue background;
+even rows have a light-blue zebra fill; all columns are auto-sized.
+The file is returned as base64 JSON, decoded in the browser, and downloaded directly.
+Works for full sends, partial sends, and cancellations.
+- **Clear form button** — erases subject, body (TinyMCE) and footer without reloading the page. Also clears sessionStorage and the post-send summary banner.
+- **Post-send summary banner** — after closing the progress modal, an inline alert shows the final count of sent and failed emails. Dismissable.
+- **Status icon after send** — the finish function now sets a contextual status: green checkmark when all sent, yellow warning when partial failures, red when total failure, grey when cancelled.
+- **Send history** — the last 5 sends are stored in `glpi_configs` and displayed in a table at the bottom of the compose page (date, subject, sent, failed). Populated automatically after each mass send.
+- **Placeholder variables** — body, footer and subject support `{nombre}`, `{nombre_completo}` and `{email}`. Each recipient receives a personalised copy. Available variables are shown as a hint below the subject field.
+- **Active recipients badge** in configuration page header showing the current count.
+
+### Fixed
+
+- `processBatch` query now includes `ORDER BY u.id ASC` — without a deterministic order, page-based LIMIT/OFFSET could skip or duplicate recipients if users changed status mid-send.
+- Transport `stop()` called after each batch to close the SMTP connection and avoid leaking open connections on servers with concurrent session limits.
+
+### Changed
+
+- Report format changed from CSV (1.5.2) to **XLSX** using PhpSpreadsheet —
+  no extra dependency needed, GLPI 11 already ships the library.
+- Locales: `es_MX`, `en_US`, `en_GB`, `fr_FR`, `de_DE` — 95 strings.
+
+---
+
+## [1.5.2] — 2026-04-04
+
+### Added
+
+- **Sending report CSV** — a "Download report" button appears in the progress
+  modal after every send (including partial sends and cancellations). The CSV
+  contains one row per recipient with date, subject, email, status (Sent /
+  Failed) and failure reason. UTF-8 BOM included for correct Excel rendering.
+- **Image size limit in TinyMCE** — the `images_upload_handler` is intercepted
+  before init. When a user inserts an image, the plugin checks whether the image
+  size plus current attachments plus already-embedded images would exceed the
+  configured `max_attachment_mb` limit. If so, the image is rejected with an
+  inline error message in the editor and is never uploaded to `glpi_documents`.
+  Embedded image bytes are tracked in `window._mbEmbeddedBytes` and reset on
+  each new send cycle.
+
+---
+
 ## [1.5.1] — 2026-04-04
 
 ### Fixed

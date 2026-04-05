@@ -152,6 +152,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'generate_report') {
+        ob_start();
+        $rows    = array_slice(json_decode((string) ($_POST['rows'] ?? '[]'), true) ?? [], 0, 10000);
+        $subject = trim(strip_tags((string) ($_POST['subject'] ?? '')));
+        $stamp   = gmdate('Y-m-d H:i', time() - (7 * 3600)); // GMT-7
+
+        $spread = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spread->getProperties()
+            ->setCreator('Mail Blast - GLPI plugin')
+            ->setTitle(__('Mail Blast sending report', 'mailblast'));
+
+        $ws = $spread->getActiveSheet();
+        $ws->setTitle(__('Report', 'mailblast'));
+
+        // Header row
+        $headers = [
+            __('Date',    'mailblast'),
+            __('Subject', 'mailblast'),
+            __('Email',   'mailblast'),
+            __('Status',  'mailblast'),
+            __('Reason',  'mailblast'),
+        ];
+        foreach ($headers as $i => $h) {
+            $ws->setCellValue([$i + 1, 1], $h);
+        }
+
+        // Bold + background on header
+        $ws->getStyle('A1:E1')->getFont()->setBold(true);
+        $ws->getStyle('A1:E1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF2F74B5');
+        $ws->getStyle('A1:E1')->getFont()->getColor()
+            ->setARGB('FFFFFFFF');
+
+        // Data rows
+        $sentLabel   = __('Sent',   'mailblast');
+        $failedLabel = __('Failed', 'mailblast');
+        $row = 2;
+        foreach ($rows as $r) {
+            $status = ($r['status'] ?? '') === 'sent' ? $sentLabel : $failedLabel;
+            // Prefix cells with leading formula chars to prevent formula injection
+            $safeEmail  = preg_replace('/^([=+\-@])/', "'" . '$1', (string)($r['email']  ?? ''));
+            $safeReason = preg_replace('/^([=+\-@])/', "'" . '$1', (string)($r['reason'] ?? ''));
+            $ws->setCellValue([1, $row], $stamp);
+            $ws->setCellValue([2, $row], $subject);
+            $ws->setCellValue([3, $row], $safeEmail);
+            $ws->setCellValue([4, $row], $status);
+            $ws->setCellValue([5, $row], $safeReason);
+
+            // Zebra rows
+            if ($row % 2 === 0) {
+                $ws->getStyle("A{$row}:E{$row}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('FFDDEBF7');
+            }
+            $row++;
+        }
+
+        // Auto-width columns
+        foreach (range('A', 'E') as $col) {
+            $ws->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spread);
+        ob_start();
+        $writer->save('php://output');
+        $xlsx = ob_get_clean();
+
+        ob_end_clean();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'ok'       => true,
+            'data'     => base64_encode($xlsx),
+            'filename' => 'mailblast_report_' . gmdate('Y-m-d_His') . '.xlsx',
+            'csrf'     => Session::getNewCSRFToken(),
+        ]);
+        exit;
+    }
+
     if ($action === 'queue_process') {
         ob_start();
         $sendId = trim((string) ($_POST['send_id'] ?? ''));
@@ -161,7 +240,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attRaw = (string) ($_POST['attachments_b64'] ?? '');
         $attB64 = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
 
-        if ($sendId === '') {
+        // Validate sendId: only hex chars and dashes, 8-40 chars
+        if ($sendId === '' || !preg_match('/^[0-9a-f-]{8,40}$/', $sendId)) {
             ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Missing send_id', 'mailblast')]);
@@ -346,15 +426,25 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
         <div id="mb_formAlert" class="alert alert-danger py-2 mb-3" style="display:none" role="alert"></div>
 
         <!-- ── Compose ─────────────────────────────────────────────────── -->
-        <h4 class="mb-3">
-          <i class="ti ti-pencil me-1"></i>
-          <?php echo __('Compose message', 'mailblast'); ?>
-        </h4>
+        <div class="d-flex align-items-center mb-3">
+          <h4 class="mb-0">
+            <i class="ti ti-pencil me-1"></i>
+            <?php echo __('Compose message', 'mailblast'); ?>
+          </h4>
+          <button type="button" id="mb_clearForm" class="btn btn-sm btn-outline-secondary ms-auto">
+            <i class="ti ti-eraser me-1"></i><?php echo __('Clear form', 'mailblast'); ?>
+          </button>
+        </div>
 
         <div class="mb-3">
-          <label class="form-label fw-bold" for="mb_subject">
-            <?php echo __('Subject', 'mailblast'); ?>
-            <span class="text-danger">*</span>
+          <label class="form-label fw-bold d-flex justify-content-between align-items-center" for="mb_subject">
+            <span>
+              <?php echo __('Subject', 'mailblast'); ?>
+              <span class="text-danger">*</span>
+            </span>
+            <span id="mb_subjectCounter" class="small text-muted fw-normal">
+              <?php echo mb_strlen($savedForm['subject']); ?>/250
+            </span>
           </label>
           <input
             id="mb_subject"
@@ -365,6 +455,9 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
             value="<?php echo htmlspecialchars($savedForm['subject'], ENT_QUOTES, 'UTF-8'); ?>"
             required
           >
+          <div class="form-text text-muted">
+            <?php echo __('Available placeholders: {nombre}, {nombre_completo}, {email}', 'mailblast'); ?>
+          </div>
         </div>
 
         <div class="mb-3">
@@ -398,7 +491,13 @@ $formAction = Plugin::getWebDir('mailblast') . '/front/send.php';
               false,  // init_on_demand
               ['link'] // remove link plugin
           );
-          // Our scriptBlock runs AFTER GLPI's in the jQuery ready queue.
+          // Pre-compute all PHP values used inside the scriptBlock below.
+          // json_encode calls with __() cannot be nested inside a single-quoted
+          // scriptBlock string because the single quotes inside __() break the
+          // outer PHP string. Assign to variables first, then concatenate.
+          $mb_img_limit_msg = json_encode(__('Image not inserted: combined size would exceed the %s MB limit set in Configuration.', 'mailblast'));
+
+          // Our scriptBlock runs AFTER GLPI in the jQuery ready queue.
           // We modify the config object and init manually.
           echo Html::scriptBlock('
 $(function() {
@@ -412,23 +511,21 @@ $(function() {
             + " | alignleft aligncenter alignright alignjustify";
     }
 
-    // 2. Fix GLPI\'s document click handler that removes formatting.
-    //    GLPI registers a handler that calls .trigger("click") on active
-    //    toolbar buttons (.tox-tbtn--enabled), which removes lists, indentation
-    //    and formatting when clicking outside the editor.
-    //    We wrap the setup to neutralise that specific behaviour after init.
-    var _origSetup = conf.setup;
+    // 2 + 3. Single conf.setup wrapper handling both:
+    //    a) Fix the GLPI document click handler that removes formatting
+    //    b) Intercept images_upload_handler for size limit (must run after init
+    //       because GLPI sets the handler during tinyMCE.init, not before)
+    var _imgLimitMsg = ' . $mb_img_limit_msg . ';
+    var _origSetup   = conf.setup;
     conf.setup = function(editor) {
         if (_origSetup) _origSetup(editor);
         editor.on("init", function() {
-            // Find and patch GLPI\'s anonymous click handler on document
+            // a) Neutralise GLPI click handler that un-formats on external click
             var handlers = ($._data(document, "events") || {}).click || [];
             handlers.forEach(function(h) {
                 if (h.handler.toString().indexOf("tox-tbtn--enabled") !== -1) {
                     var orig = h.handler;
                     h.handler = function(e) {
-                        // Temporarily remove --enabled so trigger("click")
-                        // acts on buttons with no active state → no-op for format
                         var enabled = $(".tox-tbtn.tox-tbtn--enabled");
                         enabled.removeClass("tox-tbtn--enabled");
                         orig.call(this, e);
@@ -436,6 +533,25 @@ $(function() {
                     };
                 }
             });
+            // b) Intercept upload handler to enforce combined size limit
+            window._mbEmbeddedBytes = window._mbEmbeddedBytes || 0;
+            var _origUpload = editor.options.get("images_upload_handler");
+            if (typeof _origUpload === "function") {
+                editor.options.set("images_upload_handler", function(blobInfo, progress) {
+                    var imgBytes = blobInfo.blob().size;
+                    var attBytes = window._mbSelectedFiles
+                        ? Array.from(window._mbSelectedFiles.files).reduce(function(s, f) { return s + f.size; }, 0)
+                        : 0;
+                    var limitBytes = (window._mbMaxAttMb || 15) * 1024 * 1024;
+                    if (window._mbEmbeddedBytes + attBytes + imgBytes > limitBytes) {
+                        return Promise.reject({ message: _imgLimitMsg.replace("%s", window._mbMaxAttMb || 15), remove: true });
+                    }
+                    return _origUpload(blobInfo, progress).then(function(location) {
+                        window._mbEmbeddedBytes += imgBytes;
+                        return location;
+                    });
+                });
+            }
         });
     };
 
@@ -710,6 +826,9 @@ $(function() {
           </div>
         </div>
 
+        <!-- Post-send inline summary — filled after modal is closed -->
+        <div id="mb_summaryBanner" class="alert mb-3" style="display:none" role="alert"></div>
+
         <!-- ── Progress modal (shown during mass-send) ────────────────── -->
         <div class="modal fade" id="mb_progressModal" tabindex="-1"
              data-bs-backdrop="static" data-bs-keyboard="false"
@@ -784,6 +903,11 @@ $(function() {
                 <button type="button" class="btn btn-outline-danger" id="mb_cancelSend">
                   <i class="ti ti-x me-1"></i>
                   <?php echo __('Cancel', 'mailblast'); ?>
+                </button>
+                <!-- Download report XLSX — hidden while sending, shown after finish -->
+                <button type="button" class="btn btn-outline-success d-none" id="mb_downloadReport">
+                  <i class="ti ti-file-spreadsheet me-1"></i>
+                  <?php echo __('Download report', 'mailblast'); ?>
                 </button>
                 <!-- Close button — hidden while sending, shown after finish -->
                 <button type="button" class="btn btn-primary d-none" id="mb_closeProgress" data-bs-dismiss="modal">
@@ -883,26 +1007,36 @@ $(function() {
   // Config values from PHP
   const _mbBatchDelay = <?php echo (int) $cfgBatchDelay; ?>;
   const _mbMaxAttMb   = <?php echo (int) $cfgMaxAttMb; ?>;
+  window._mbMaxAttMb  = _mbMaxAttMb; // expose to TinyMCE scriptBlock scope
 
   // ── File management ────────────────────────────────────────────────────
   const input    = document.getElementById('mb_fileInput');
   const dropZone = document.getElementById('mb_dropZone');
   const fileList = document.getElementById('mb_fileList');
 
-  // Click on drop zone or browse label opens picker
-  dropZone.addEventListener('click', () => input.click());
+  if (!input || !dropZone || !fileList) {
+    console.error('Mail Blast: required DOM elements not found');
+  } else {
 
-  // Drag & drop
-  dropZone.addEventListener('dragover', e => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
+  // Click drop zone opens picker — but ignore clicks that originated on the input itself
+  dropZone.addEventListener('click', (e) => {
+    if (e.target === input) return; // prevent infinite loop: input is inside dropZone
+    input.click();
   });
-  ['dragleave', 'dragend', 'drop'].forEach(ev =>
-    dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
-  );
+
+  // Drag & drop — use enter/leave counter to avoid false dragleave on child elements
+  let _dragCounter = 0;
+  dropZone.addEventListener('dragenter', e => { e.preventDefault(); _dragCounter++; dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => { _dragCounter--; if (_dragCounter <= 0) { _dragCounter = 0; dropZone.classList.remove('dragover'); } });
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); });
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
-    mergeFiles(e.dataTransfer.files);
+    e.stopPropagation();
+    _dragCounter = 0;
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      mergeFiles(e.dataTransfer.files);
+    }
   });
 
   // Track selected files across multiple picker opens
@@ -1003,6 +1137,8 @@ $(function() {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  } // end null-guard for input/dropZone/fileList
+
   // ── Footer contenteditable toolbar ─────────────────────────────────────────
   (function() {
     const edit   = document.getElementById('mb_footerEdit');
@@ -1037,7 +1173,35 @@ $(function() {
     });
   }());
 
-  // ── Test address toggle ────────────────────────────────────────────────
+  // ── Clear form button ───────────────────────────────────────────────────
+  (function() {
+    var btn = document.getElementById('mb_clearForm');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+      // Clear subject
+      var subj = document.getElementById('mb_subject');
+      if (subj) { subj.value = ''; subj.dispatchEvent(new Event('input')); }
+      // Clear TinyMCE body
+      if (typeof tinymce !== 'undefined') {
+        tinymce.editors.forEach(function(ed) {
+          if (ed.id && ed.id.indexOf('mb_body_') === 0) ed.setContent('');
+        });
+      }
+      // Clear contenteditable footer
+      var footerEdit = document.getElementById('mb_footerEdit');
+      var footerHidden = document.getElementById('mb_footer');
+      if (footerEdit) footerEdit.innerHTML = '';
+      if (footerHidden) footerHidden.value = '';
+      // Clear summary banner
+      var banner = document.getElementById('mb_summaryBanner');
+      if (banner) banner.style.display = 'none';
+      try {
+        sessionStorage.removeItem('mb_subject');
+      } catch(_) {}
+    });
+  }());
+
+  // ── Test address toggle ────────────────────────────────────────────────────
   const testMe       = document.getElementById('mb_testMe');
   const testSpecific = document.getElementById('mb_testSpecific');
   const testField    = document.getElementById('mb_testEmailField');
@@ -1119,8 +1283,10 @@ $(function() {
       // Swap Cancel → Close
       var cb = $$('mb_cancelSend');
       var cl = $$('mb_closeProgress');
+      var dl = $$('mb_downloadReport');
       if (cb) cb.classList.add('d-none');
       if (cl) cl.classList.remove('d-none');
+      if (dl) dl.classList.remove('d-none');
 
       // Colour bar
       var b = $$('mb_progressBar');
@@ -1131,9 +1297,61 @@ $(function() {
         else                    b.classList.add('bg-success');
       }
 
-      if (errMsg)    addErrorItem(errMsg);
-      if (_cancelled) setStatus(<?php echo json_encode(__('Sending cancelled.', 'mailblast')); ?>, 'warning');
+      if (errMsg) addErrorItem(errMsg);
+      if (_cancelled) {
+        setStatus(<?php echo json_encode(__('Sending cancelled.', 'mailblast')); ?>, 'warning');
+      } else if (_totalErrors > 0 && _totalSent === 0) {
+        setStatus(<?php echo json_encode(__('Sending failed — no emails were delivered.', 'mailblast')); ?>, 'danger');
+      } else if (_totalErrors > 0) {
+        setStatus(_totalSent + ' ' + <?php echo json_encode(__('sent', 'mailblast')); ?> + ', ' + _totalErrors + ' ' + <?php echo json_encode(__('failed', 'mailblast')); ?>, 'warning');
+      } else {
+        setStatus(<?php echo json_encode(__('All emails sent successfully.', 'mailblast')); ?>, 'success');
+      }
     }
+
+    // ── report download (XLSX via PhpSpreadsheet, server-side) ──────────
+    (function() {
+      var dlBtn = $$('mb_downloadReport');
+      if (!dlBtn) return;
+      dlBtn.addEventListener('click', function() {
+        if (!_reportRows.length) return;
+        dlBtn.disabled = true;
+        var origHTML = dlBtn.innerHTML;
+        dlBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>'
+                        + <?php echo json_encode(__('Generating…', 'mailblast')); ?>;
+
+        var fd = new FormData();
+        fd.append('_glpi_csrf_token', csrfToken());
+        fd.append('action',  'generate_report');
+        fd.append('rows',    JSON.stringify(_reportRows));
+        fd.append('subject', ($$('mb_subject') || {}).value || '');
+
+        fetch(<?php echo json_encode($formAction); ?>, { method: 'POST', body: fd })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.ok || !data.data) throw new Error(data.error || 'Failed');
+            updateCsrf(data.csrf);
+            var binary = atob(data.data);
+            var bytes  = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            var blob = new Blob([bytes], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            var url = URL.createObjectURL(blob);
+            var a   = document.createElement('a');
+            a.href  = url;
+            a.download = data.filename || 'mailblast_report.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+          })
+          .catch(function(e) { alert(e.message || 'Error generating report'); })
+          .then(function() {
+            dlBtn.disabled  = false;
+            dlBtn.innerHTML = origHTML;
+          });
+      });
+    }());
 
     // ── safe fetch wrapper ───────────────────────────────────────────────
 
@@ -1157,6 +1375,7 @@ $(function() {
 
     let _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [];
     let _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
+    let _reportRows = []; // { email, status, reason }
 
     function processNext(offset) {
       if (_cancelled) { finish(); return; }
@@ -1176,6 +1395,12 @@ $(function() {
           updateCsrf(data.csrf);
           _totalSent   += data.sent   || 0;
           _totalErrors += data.errors || 0;
+          // Track sent addresses for report
+          if (data.sent_list && data.sent_list.length) {
+            data.sent_list.forEach(function(addr) {
+              _reportRows.push({ email: addr, status: 'sent', reason: '' });
+            });
+          }
           var processed = Math.min(data.next_offset || offset, _total);
           var pct = _total > 0 ? Math.round((processed / _total) * 100) : 0;
           setBar(pct);
@@ -1184,7 +1409,16 @@ $(function() {
           if (lbl) lbl.textContent = processed + ' / ' + _total;
 
           if (data.error_list && data.error_list.length) {
-            data.error_list.forEach(addErrorItem);
+            data.error_list.forEach(function(msg) {
+              addErrorItem(msg);
+              // Parse "email: reason" format for report
+              var sep = msg.indexOf(': ');
+              _reportRows.push({
+                email:  sep > -1 ? msg.substring(0, sep) : msg,
+                status: 'failed',
+                reason: sep > -1 ? msg.substring(sep + 2) : ''
+              });
+            });
           }
 
           if (data.done || _cancelled) {
@@ -1213,6 +1447,8 @@ $(function() {
       _totalSent   = 0;
       _totalErrors = 0;
       _total       = 0;
+      _reportRows  = [];
+      window._mbEmbeddedBytes = 0;
       _sendId      = '';
       _qHtml       = '';
       _qPlain      = '';
@@ -1247,7 +1483,28 @@ $(function() {
       }, 1000);
 
       // Show progress modal
-      if (!_progressModal) _progressModal = new bootstrap.Modal($$('mb_progressModal'));
+      if (!_progressModal) {
+        _progressModal = new bootstrap.Modal($$('mb_progressModal'));
+        $$('mb_progressModal').addEventListener('hidden.bs.modal', function() {
+          // Show inline summary after modal closes
+          var banner = $$('mb_summaryBanner');
+          if (!banner || (!_totalSent && !_totalErrors)) return;
+          var type = _totalErrors > 0 ? (_totalSent === 0 ? 'danger' : 'warning') : 'success';
+          var icon = _totalErrors > 0 ? 'ti-alert-triangle' : 'ti-circle-check';
+          banner.className = 'alert alert-' + type + ' mb-3 d-flex align-items-center gap-2';
+          var closeBtn = document.createElement('button');
+          closeBtn.type = 'button';
+          closeBtn.className = 'btn-close ms-auto';
+          closeBtn.addEventListener('click', function() { banner.style.display = 'none'; });
+          banner.innerHTML = '<i class="ti ' + icon + ' fs-5"></i><span>'
+            + _totalSent + ' ' + <?php echo json_encode(__('sent', 'mailblast')); ?>
+            + (_totalErrors > 0 ? ', ' + _totalErrors + ' ' + <?php echo json_encode(__('failed', 'mailblast')); ?> : '')
+            + '</span>';
+          banner.appendChild(closeBtn);
+          banner.style.display = '';
+          banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
       _progressModal.show();
 
       // Build FormData manually — never use new FormData(form) because it
@@ -1377,7 +1634,7 @@ $(function() {
           cancelBtn.disabled = true;
           cancelBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>'
                               + (window._mbI18n ? window._mbI18n.cancelling : <?php echo json_encode(__('Cancelling…', 'mailblast')); ?>);
-          // Finish immediately — don't wait for in-flight fetch
+          // Finish immediately. Do not wait for in-flight fetch.
           finish();
         }
       });
@@ -1387,7 +1644,7 @@ $(function() {
 
   // ── sessionStorage: survive theme switches ────────────────────────────────
   //
-  // When the user toggles GLPI's dark/light theme the page reloads.
+  // When the user toggles the GLPI dark/light theme the page reloads.
   // TinyMCE content is lost because it was never POSTed.
   // We auto-save to sessionStorage on every change and restore after TinyMCE
   // finishes initialising, giving the illusion of persistence.
@@ -1397,8 +1654,18 @@ $(function() {
   // Save subject field on every keystroke
   const subjectEl = document.getElementById('mb_subject');
   if (subjectEl) {
+    const subjectCounter = document.getElementById('mb_subjectCounter');
+    function updateSubjectCounter() {
+      if (subjectCounter) {
+        const len = Array.from(subjectEl.value).length;
+        subjectCounter.textContent = len + '/250';
+        subjectCounter.className = 'small fw-normal '
+          + (len >= 240 ? 'text-danger' : len >= 200 ? 'text-warning' : 'text-muted');
+      }
+    }
     subjectEl.addEventListener('input', () => {
       try { sessionStorage.setItem(SS_SUBJECT, subjectEl.value); } catch(_) {}
+      updateSubjectCounter();
     });
 
     // Restore subject if sessionStorage has a more recent value
@@ -1406,6 +1673,7 @@ $(function() {
       const saved = sessionStorage.getItem(SS_SUBJECT);
       if (saved !== null && saved !== '') subjectEl.value = saved;
     } catch(_) {}
+    updateSubjectCounter();
   }
 
   // ── TinyMCE: intercept EVERY editor at init time ─────────────────────────
@@ -1413,7 +1681,7 @@ $(function() {
   // We hook tinymce.on('AddEditor') so our base64 image handler is installed
   // the instant each editor is created — BEFORE any image upload can fire.
   // This is more reliable than patching after the fact with a polling loop,
-  // because GLPI's initEditorSystem() sets images_upload_url at init time and
+  // because GLPI initEditorSystem() sets images_upload_url at init time and
   // our handler needs to take precedence from the very first paste/drop event.
   //
   // The handler converts every pasted/dropped/inserted image to an inline
@@ -1438,7 +1706,7 @@ $(function() {
     // Shared DataTransfer from the main script — accessed via the file input
     var _fileInput = document.getElementById('mb_fileInput');
 
-    // CSRF token: read from the hidden form field so it's always current.
+    // CSRF token: read from the hidden form field. Always current.
     // After each AJAX response the server returns a fresh token we store here.
     var _csrfToken = (function() {
       var el = document.querySelector('input[name="_glpi_csrf_token"]');
@@ -1448,7 +1716,7 @@ $(function() {
     function _updateCsrf(newToken) {
       if (!newToken) return;
       _csrfToken = newToken;
-      // Also update the form's hidden field so normal submits still work
+      // Also update the form hidden field so normal submits still work
       var el = document.querySelector('input[name="_glpi_csrf_token"]');
       if (el) el.value = newToken;
     }

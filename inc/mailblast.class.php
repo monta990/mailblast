@@ -239,11 +239,19 @@ class PluginMailblastMailblast extends CommonGLPI
                 'subject'    => $subject,
                 'total'      => $total,
                 'created_at' => time(),
+                'prev_sent'   => 0,
+                'prev_errors' => 0,
             ]),
         ]);
 
         // Purge any jobs older than 2 hours before starting a new one.
-        self::cleanupStaleJobs();
+        // Run stale job cleanup at most once per PHP process to avoid
+        // redundant DB queries when multiple queue batches start quickly.
+        static $cleanupDone = false;
+        if (!$cleanupDone) {
+            self::cleanupStaleJobs();
+            $cleanupDone = true;
+        }
 
         return [
             'send_id'         => $sendId,
@@ -261,7 +269,7 @@ class PluginMailblastMailblast extends CommonGLPI
      * on every call.  Attachments are decoded to per-request temp files,
      * attached via addAttachment(), then immediately unlinked.
      *
-     * @return array{sent: int, errors: int, next_offset: int, done: bool, error_list: string[]}
+     * @return array{sent: int, errors: int, next_offset: int, done: bool, error_list: string[], sent_list: string[]}
      */
     public static function processBatch(
         string $sendId,
@@ -295,11 +303,13 @@ class PluginMailblastMailblast extends CommonGLPI
                 'u.is_active'   => 1,
                 'NOT'           => ['ue.email' => ''],
             ],
-            'LIMIT' => $batchSize,
-            'START' => $offset,
+            'ORDER'  => ['u.id ASC'],
+            'LIMIT'  => $batchSize,
+            'START'  => $offset,
         ]);
 
         $errorList  = [];
+        $sentList   = [];
         $sent = $errors = 0;
 
         // Decode attachment base64 strings to temp files once for the whole batch.
@@ -310,12 +320,20 @@ class PluginMailblastMailblast extends CommonGLPI
             if ($bytes === false || $bytes === '') {
                 continue;
             }
+            // Sanitize name: strip path components, fall back to safe default
+            $safeName = basename(trim((string)($att['name'] ?? 'attachment')));
+            if ($safeName === '' || $safeName === '.') $safeName = 'attachment';
+
+            // Verify MIME against actual bytes — ignore whatever the browser sent
+            $realMime = (new info(FILEINFO_MIME_TYPE))->buffer($bytes)
+                      ?: 'application/octet-stream';
+
             $tmp = @tempnam(sys_get_temp_dir(), 'mb_att_');
             if ($tmp !== false && @file_put_contents($tmp, $bytes) !== false) {
                 $batchTempFiles[] = [
                     'path' => $tmp,
-                    'name' => $att['name'],
-                    'mime' => $att['mime'],
+                    'name' => $safeName,
+                    'mime' => $realMime,
                 ];
             }
         }
@@ -335,16 +353,44 @@ class PluginMailblastMailblast extends CommonGLPI
                 continue;
             }
 
+            // 14. Replace placeholder variables per recipient.
+            // Supported: {nombre} (first name or login), {email}, {nombre_completo}
+            $firstName = trim((string)($row['firstname'] ?? '')) ?: $row['login'];
+            $fullName  = trim($row['firstname'] . ' ' . $row['realname']) ?: $row['login'];
+            $perHtml  = str_replace(
+                ['{nombre}', '{email}', '{nombre_completo}'],
+                [htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8'),
+                 htmlspecialchars($toEmail,   ENT_QUOTES, 'UTF-8'),
+                 htmlspecialchars($fullName,  ENT_QUOTES, 'UTF-8')],
+                $html
+            );
+            $perPlain = str_replace(
+                ['{nombre}', '{email}', '{nombre_completo}'],
+                [$firstName, $toEmail, $fullName],
+                $plain
+            );
+            $perSubject = str_replace(
+                ['{nombre}', '{email}', '{nombre_completo}'],
+                [$firstName, $toEmail, $fullName],
+                $subject
+            );
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $displayName, $subject, $html, $plain, $batchTempFiles
+                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles
             );
 
             if ($err === null) {
                 $sent++;
+                $sentList[] = $toEmail;
             } else {
                 $errorList[] = $toEmail . ': ' . $err;
                 $errors++;
             }
+        }
+
+        // Close SMTP connection after the batch — avoids leaking open connections
+        // on servers that limit concurrent SMTP sessions.
+        if (method_exists($transport, 'stop')) {
+            try { $transport->stop(); } catch (\Throwable $e) {}
         }
 
         // Unlink per-request temp files.
@@ -360,8 +406,24 @@ class PluginMailblastMailblast extends CommonGLPI
         // Also stop if we've passed the originally stored total (safety cap).
         if (!$done && $total > 0 && $nextOffset >= $total) $done = true;
 
+        // Accumulate running totals across batches.
+        // prev_sent/prev_errors start at 0 and are updated after every batch
+        // so the final batch reads the correct cumulative total for addHistory.
+        $runSent   = (int) ($job['prev_sent']   ?? 0) + $sent;
+        $runErrors = (int) ($job['prev_errors'] ?? 0) + $errors;
+
+        if (!$done) {
+            Config::setConfigurationValues(self::CONFIG_CONTEXT, [
+                'queue_' . $sendId => json_encode(array_merge($job, [
+                    'prev_sent'   => $runSent,
+                    'prev_errors' => $runErrors,
+                ])),
+            ]);
+        }
+
         if ($done) {
             self::cleanupJob($sendId);
+            self::addHistory($subject, $runSent, $runErrors);
         }
 
         return [
@@ -370,6 +432,7 @@ class PluginMailblastMailblast extends CommonGLPI
             'next_offset' => $nextOffset,
             'done'        => $done,
             'error_list'  => $errorList,
+            'sent_list'   => $sentList,
         ];
     }
 
@@ -411,6 +474,36 @@ class PluginMailblastMailblast extends CommonGLPI
             'context' => self::CONFIG_CONTEXT,
             'name'    => 'queue_' . $sendId,
         ]);
+    }
+
+    // ─── Send history ────────────────────────────────────────────────────
+
+    /** Appends one entry to the send history (last 5 sends). */
+    public static function addHistory(string $subject, int $sent, int $errors): void
+    {
+        $cfg  = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['send_history']);
+        $list = json_decode((string) ($cfg['send_history'] ?? '[]'), true);
+        if (!is_array($list)) $list = [];
+
+        array_unshift($list, [
+            'date'    => gmdate('Y-m-d H:i', time() - (7 * 3600)),
+            'subject' => strip_tags(html_entity_decode($subject, ENT_QUOTES, 'UTF-8')),
+            'sent'    => $sent,
+            'errors'  => $errors,
+        ]);
+
+        $list = array_slice($list, 0, 5);
+        Config::setConfigurationValues(self::CONFIG_CONTEXT, [
+            'send_history' => json_encode($list),
+        ]);
+    }
+
+    /** Returns the last 5 sends as array. */
+    public static function getHistory(): array
+    {
+        $cfg  = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['send_history']);
+        $list = json_decode((string) ($cfg['send_history'] ?? '[]'), true);
+        return is_array($list) ? $list : [];
     }
 
     // ─── Image embedding ─────────────────────────────────────────────────
@@ -460,9 +553,15 @@ class PluginMailblastMailblast extends CommonGLPI
         ]);
 
         if ($iterator->count()) {
-            $fullPath = GLPI_DOC_DIR . '/' . $iterator->current()['filepath'];
-            if (file_exists($fullPath)) {
-                @unlink($fullPath);
+            $filepath = (string) ($iterator->current()['filepath'] ?? '');
+            if ($filepath !== '') {
+                $fullPath = realpath(GLPI_DOC_DIR . '/' . $filepath);
+                $docBase  = realpath(GLPI_DOC_DIR);
+                // Only delete if resolved path stays inside GLPI_DOC_DIR
+                if ($fullPath !== false && $docBase !== false
+                    && str_starts_with($fullPath, $docBase . DIRECTORY_SEPARATOR)) {
+                    @unlink($fullPath);
+                }
             }
         }
 
