@@ -4,10 +4,23 @@
  * Main compose & send page.
  */
 
+// Buffer ALL output from the start so GLPI warnings or notices never corrupt
+// AJAX JSON responses. Each AJAX action calls ob_end_clean() before outputting JSON,
+// and the page render calls ob_end_flush() implicitly at script end.
+ob_start();
+
 // GLPI 11 always bootstraps via Symfony — GLPI_ROOT is defined before this file runs.
 include_once GLPI_ROOT . '/inc/includes.php';
 
 Session::checkRight('config', UPDATE);
+
+// Discard all output buffers (including GLPI warnings) before sending JSON.
+// Called before every JSON response to prevent HTML corruption.
+function mb_clean_buffers(): void {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+}
 
 // ─── Handle POST ─────────────────────────────────────────────────────────────
 
@@ -25,13 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'test_send') {
         // Capture any accidental output (e.g. GLPI warnings) so we always return clean JSON.
-        ob_start();
 
         // Persist subject + footer (body not persisted by design)
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
         if ($subject === '') {
-            ob_end_clean();
+            mb_clean_buffers();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Subject is required', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
             exit;
@@ -44,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($testMode === 'specific') {
             $raw = trim((string) ($_POST['test_email'] ?? ''));
             if ($raw === '') {
-                ob_end_clean();
+                mb_clean_buffers();
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => __('Test address is required', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
                 exit;
@@ -61,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
             if (empty($testEmails)) {
-                ob_end_clean();
+                mb_clean_buffers();
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => __('Test address is required', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
                 exit;
@@ -69,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $single = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
             if (empty($single)) {
-                ob_end_clean();
+                mb_clean_buffers();
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => __('No email found for your account', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
                 exit;
@@ -103,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 
-        ob_end_clean();
+        mb_clean_buffers();
         header('Content-Type: application/json');
         $newToken = Session::getNewCSRFToken();
         if ($totalSent > 0) {
@@ -116,7 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'queue_init') {
-        ob_start();
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
         // Decode base64 attachments from JS RAM into per-request temp files.
@@ -138,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 
-        ob_end_clean();
+        mb_clean_buffers();
         header('Content-Type: application/json');
         echo json_encode([
             'ok'              => true,
@@ -153,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'generate_report') {
-        ob_start();
         $rows    = array_slice(json_decode((string) ($_POST['rows'] ?? '[]'), true) ?? [], 0, 10000);
         $subject = trim(strip_tags((string) ($_POST['subject'] ?? '')));
         $stamp   = gmdate('Y-m-d H:i', time() - (7 * 3600)); // GMT-7
@@ -216,11 +226,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spread);
-        ob_start();
         $writer->save('php://output');
         $xlsx = ob_get_clean();
 
-        ob_end_clean();
+        mb_clean_buffers();
         header('Content-Type: application/json');
         echo json_encode([
             'ok'       => true,
@@ -232,7 +241,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'queue_process') {
-        ob_start();
         $sendId = trim((string) ($_POST['send_id'] ?? ''));
         $offset = max(0, (int) ($_POST['offset'] ?? 0));
         $html   = (string) ($_POST['html']  ?? '');
@@ -242,14 +250,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Validate sendId: only hex chars and dashes, 8-40 chars
         if ($sendId === '' || !preg_match('/^[0-9a-f-]{8,40}$/', $sendId)) {
-            ob_end_clean();
+            mb_clean_buffers();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Missing send_id', 'mailblast')]);
             exit;
         }
 
         if (trim(strip_tags($html)) === '') {
-            ob_end_clean();
+            mb_clean_buffers();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Body is required', 'mailblast')]);
             exit;
@@ -257,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, PluginMailblastMailblast::getBatchSize());
         $result['csrf'] = Session::getNewCSRFToken();
-        ob_end_clean();
+        mb_clean_buffers();
         header('Content-Type: application/json');
         echo json_encode(['ok' => true] + $result);
         exit;

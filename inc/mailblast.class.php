@@ -325,7 +325,7 @@ class PluginMailblastMailblast extends CommonGLPI
             if ($safeName === '' || $safeName === '.') $safeName = 'attachment';
 
             // Verify MIME against actual bytes — ignore whatever the browser sent
-            $realMime = (new info(FILEINFO_MIME_TYPE))->buffer($bytes)
+            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes)
                       ?: 'application/octet-stream';
 
             $tmp = @tempnam(sys_get_temp_dir(), 'mb_att_');
