@@ -29,7 +29,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
 | Feature | Details |
 |---|---|
-| **Rich-text body editor** | TinyMCE 6 — bold, italic, tables, images, lists, indentation, text alignment |
+| **Rich-text body editor** | TinyMCE 7 (GLPI11) — bold, italic, tables, images, lists, indentation, text alignment |
 | **Text alignment** | Left, center, right and justify buttons in the toolbar |
 | **Footer editor** | Native contenteditable editor with bold, italic and underline; line breaks preserved |
 | **Inline images** | Images inserted in the body are converted to base64 at send time and immediately deleted from the server |
