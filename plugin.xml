@@ -90,5 +90,6 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
    </tags>
    <screenshots>
       <screenshot>https://raw.githubusercontent.com/monta990/mailblast/main/config.png</screenshot>
+      <screenshot>https://raw.githubusercontent.com/monta990/mailblast/main/user.png</screenshot>
    </screenshots>
 </root>
