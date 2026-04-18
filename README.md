@@ -29,7 +29,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
 | Feature | Details |
 |---|---|
-| **Rich-text body editor** | TinyMCE 7 (GLPI11) — bold, italic, tables, images, lists, indentation, text alignment |
+| **Rich-text body editor** | TinyMCE 7 (GLPI 11) — bold, italic, tables, images, lists, indentation, text alignment |
 | **Text alignment** | Left, center, right and justify buttons in the toolbar |
 | **Footer editor** | Native contenteditable editor with bold, italic and underline; line breaks preserved |
 | **Inline images** | Images inserted in the body are converted to base64 at send time and immediately deleted from the server |
@@ -227,7 +227,7 @@ Sin servicios externos. Sin tareas cron. Sin dependencias adicionales más allá
 
 | Característica | Detalles |
 |---|---|
-| **Editor de cuerpo enriquecido** | TinyMCE 6 — negritas, cursiva, tablas, imágenes, listas, sangría, alineación de texto |
+| **Editor de cuerpo enriquecido** | TinyMCE 7 (GLPI 11) — negritas, cursiva, tablas, imágenes, listas, sangría, alineación de texto |
 | **Alineación de texto** | Botones izquierda, centro, derecha y justificado en la barra de herramientas |
 | **Editor de pie de página** | Editor contenteditable nativo con negrita, cursiva y subrayado; saltos de línea preservados |
 | **Imágenes embebidas** | Las imágenes insertadas se convierten a base64 al enviar y se eliminan inmediatamente del servidor |
