@@ -6,6 +6,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.1] — 2026-04-22
+
+### Added
+
+- **Cooldown protection** — `initQueue` checks `last_send_at` in `glpi_configs`; if a send completed less than 30 seconds ago, returns a localized error with seconds remaining. Prevents accidental duplicate sends from concurrent browser tabs.
+- **Body size guard** — `queue_init` rejects bodies larger than the configured `max_attachment_mb` limit before starting a send. Prevents memory exhaustion on large base64-image bodies re-posted every batch call.
+- **Non-JS fallback message** — submitting the mass-send form without JavaScript now shows a localized error instead of silently doing nothing.
+- **`validateUploadedFiles()` method** — non-AJAX form attachment path was calling this missing method (fatal on JS-disabled submit). Method added with `finfo`-based MIME verification and size enforcement.
+
+### Fixed
+
+- **Stale job cleanup order** — `cleanupStaleJobs()` now runs *before* saving the new job entry, preventing clock-skew edge case where the new job could be immediately deleted.
+- **Hardcoded GMT-7 timestamps** — `addHistory()` and `generate_report` used `gmdate(..., time() - 7*3600)`. Replaced with `date('Y-m-d H:i')` which respects the PHP/server timezone.
+- **`docIdToBase64` path traversal** — added `realpath` + `str_starts_with(GLPI_DOC_DIR)` guard, matching the protection already present in `purgeDocument`.
+- **`sendId` regex too permissive** — `/^[0-9a-f-]{8,40}$/` accepted all-dash strings. Tightened to exact UUID-like pattern `8-4-4-4-12`.
+- **`processBatch` early return shape** — missing `sent_list` key in the empty-job guard return. JS accessed `data.sent_list` unconditionally.
+- **Footer XSS** — `$_POST['footer']` saved and echoed raw. Now stripped to `b/i/u/strong/em/br` tags on save (with attribute strip) and on output.
+- **Test/queue-init attachment MIME** — temp files created from base64 uploads now verify MIME via `finfo::file()` instead of trusting browser-supplied `file.type`, matching `processBatch` behaviour.
+- **Duplicate email recipients** — within-batch deduplication via `$seenEmails` set prevents users sharing an email address from receiving the same message twice per batch.
+- **`getActiveUsersWithEmail()` dead code** — method was never called (all sends use LIMIT/OFFSET in `processBatch`). Removed.
+- **Hardcoded `'Test'` recipient name** — test sends now use the actual email address as the To: display name.
+- **`html2text` table cells** — `<td>`/`<th>` now produce tab separators; previously table cell content merged into a single line in plain-text fallback.
+- **`alert()` in attachment size error** — replaced last native `alert()` call with the inline `mb_formAlert` div for consistent UX.
+- **History date column timezone** — shows the PHP timezone identifier (e.g. `America/Mexico_City`) next to the Date column header so timestamps are unambiguous.
+
+### Changed
+
+- **Send history limit raised from 5 to 10** — `addHistory()` now keeps the last 10 mass sends instead of 5. The header badge in the configuration page updated accordingly ("Last 10 mass sends").
+
+---
+
 ## [1.6.0] — 2026-04-05
 
 ### Added

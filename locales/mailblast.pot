@@ -333,5 +333,29 @@ msgstr ""
 msgid "Last 5 mass sends"
 msgstr ""
 
+msgid "Last 10 mass sends"
+msgstr ""
+
 msgid "No sends recorded yet. History is populated after each mass mailing."
+msgstr ""
+
+msgid "File type not allowed"
+msgstr ""
+
+msgid "Upload error"
+msgstr ""
+
+msgid "Attachment size limit exceeded"
+msgstr ""
+
+msgid "Mass send requires JavaScript to be enabled."
+msgstr ""
+
+msgid "Message body is too large."
+msgstr ""
+
+msgid "Please wait %d seconds before sending again."
+msgstr ""
+
+msgid "server time"
 msgstr ""

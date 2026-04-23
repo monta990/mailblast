@@ -329,5 +329,29 @@ msgstr "Variables disponibles : {nombre}, {nombre_completo}, {email}"
 msgid "Last 5 mass sends"
 msgstr "5 derniers envois massifs"
 
+msgid "Last 10 mass sends"
+msgstr "10 derniers envois massifs"
+
 msgid "No sends recorded yet. History is populated after each mass mailing."
 msgstr "Aucun envoi enregistré. L'historique est rempli après chaque envoi massif."
+
+msgid "File type not allowed"
+msgstr "Type de fichier non autorisé"
+
+msgid "Upload error"
+msgstr "Erreur lors de l'envoi du fichier"
+
+msgid "Attachment size limit exceeded"
+msgstr "Limite de taille des pièces jointes dépassée"
+
+msgid "Mass send requires JavaScript to be enabled."
+msgstr "L'envoi en masse nécessite JavaScript activé."
+
+msgid "Message body is too large."
+msgstr "Le corps du message est trop volumineux."
+
+msgid "Please wait %d seconds before sending again."
+msgstr "Veuillez attendre %d secondes avant d'envoyer à nouveau."
+
+msgid "server time"
+msgstr "heure du serveur"

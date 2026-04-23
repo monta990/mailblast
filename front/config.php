@@ -171,7 +171,7 @@ Html::header(
   <div class="card mt-4">
     <div class="card-header fw-bold">
       <i class="ti ti-history me-1"></i><?php echo __('Recent sends', 'mailblast'); ?>
-      <span class="text-muted fw-normal small ms-2"><?php echo __('Last 5 mass sends', 'mailblast'); ?></span>
+      <span class="text-muted fw-normal small ms-2"><?php echo __('Last 10 mass sends', 'mailblast'); ?></span>
     </div>
     <div class="card-body p-0">
       <?php if (empty($history)): ?>
@@ -184,7 +184,13 @@ Html::header(
           <table class="table table-hover table-sm mb-0">
             <thead>
               <tr>
-                <th><?php echo __('Date', 'mailblast'); ?></th>
+                <th>
+                  <?php echo __('Date', 'mailblast'); ?>
+                  <small class="text-muted fw-normal ms-1"
+                         title="<?php echo htmlspecialchars(__('server time', 'mailblast'), ENT_QUOTES); ?>">
+                    (<?php echo htmlspecialchars(date_default_timezone_get(), ENT_QUOTES); ?>)
+                  </small>
+                </th>
                 <th><?php echo __('Subject', 'mailblast'); ?></th>
                 <th class="text-success text-end"><?php echo __('Sent', 'mailblast'); ?></th>
                 <th class="text-danger text-end"><?php echo __('Failed', 'mailblast'); ?></th>

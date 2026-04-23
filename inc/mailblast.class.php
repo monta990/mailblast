@@ -68,37 +68,6 @@ class PluginMailblastMailblast extends CommonGLPI
 
     // ─── User / email queries ─────────────────────────────────────────────
 
-    /** @return array<array{email: string, name: string}> */
-    public static function getActiveUsersWithEmail(): array
-    {
-        global $DB;
-
-        $iterator = $DB->request([
-            'SELECT'    => ['ue.email', 'u.name', 'u.firstname', 'u.realname'],
-            'FROM'      => 'glpi_useremails AS ue',
-            'LEFT JOIN' => [
-                'glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']],
-            ],
-            'WHERE' => [
-                'ue.is_default' => 1,
-                'u.is_deleted'  => 0,
-                'u.is_active'   => 1,
-                'NOT'           => ['ue.email' => ''],
-            ],
-        ]);
-
-        $users = [];
-        foreach ($iterator as $row) {
-            $displayName = trim($row['firstname'] . ' ' . $row['realname']);
-            if ($displayName === '') {
-                $displayName = $row['name'];
-            }
-            $users[] = ['email' => $row['email'], 'name' => $displayName];
-        }
-
-        return $users;
-    }
-
     public static function countActiveUsersWithEmail(): int
     {
         global $DB;
@@ -234,6 +203,14 @@ class PluginMailblastMailblast extends CommonGLPI
         $fullHtml = self::buildHtmlBody($htmlBody, $footer);
         $total    = self::countActiveUsersWithEmail();
 
+        // Purge stale jobs before registering the new one — prevents the new
+        // job from being deleted if its created_at timestamp looks stale due to clock skew.
+        static $cleanupDone = false;
+        if (!$cleanupDone) {
+            self::cleanupStaleJobs();
+            $cleanupDone = true;
+        }
+
         Config::setConfigurationValues(self::CONFIG_CONTEXT, [
             'queue_' . $sendId => json_encode([
                 'subject'    => $subject,
@@ -243,15 +220,6 @@ class PluginMailblastMailblast extends CommonGLPI
                 'prev_errors' => 0,
             ]),
         ]);
-
-        // Purge any jobs older than 2 hours before starting a new one.
-        // Run stale job cleanup at most once per PHP process to avoid
-        // redundant DB queries when multiple queue batches start quickly.
-        static $cleanupDone = false;
-        if (!$cleanupDone) {
-            self::cleanupStaleJobs();
-            $cleanupDone = true;
-        }
 
         return [
             'send_id'         => $sendId,
@@ -287,7 +255,7 @@ class PluginMailblastMailblast extends CommonGLPI
 
         if (empty($job)) {
             return ['sent' => 0, 'errors' => 0, 'next_offset' => 0,
-                    'done' => true, 'error_list' => []];
+                    'done' => true, 'error_list' => [], 'sent_list' => []];
         }
 
         $subject = $job['subject'] ?? '';
@@ -310,6 +278,7 @@ class PluginMailblastMailblast extends CommonGLPI
 
         $errorList  = [];
         $sentList   = [];
+        $seenEmails = [];
         $sent = $errors = 0;
 
         // Decode attachment base64 strings to temp files once for the whole batch.
@@ -353,7 +322,13 @@ class PluginMailblastMailblast extends CommonGLPI
                 continue;
             }
 
-            // 14. Replace placeholder variables per recipient.
+            // Skip duplicate email addresses within the same batch.
+            if (in_array($toEmail, $seenEmails, true)) {
+                continue;
+            }
+            $seenEmails[] = $toEmail;
+
+            // Replace placeholder variables per recipient.
             // Supported: {nombre} (first name or login), {email}, {nombre_completo}
             $firstName = trim((string)($row['firstname'] ?? '')) ?: $row['login'];
             $fullName  = trim($row['firstname'] . ' ' . $row['realname']) ?: $row['login'];
@@ -424,6 +399,7 @@ class PluginMailblastMailblast extends CommonGLPI
         if ($done) {
             self::cleanupJob($sendId);
             self::addHistory($subject, $runSent, $runErrors);
+            self::recordSendCompleted();
         }
 
         return [
@@ -478,7 +454,7 @@ class PluginMailblastMailblast extends CommonGLPI
 
     // ─── Send history ────────────────────────────────────────────────────
 
-    /** Appends one entry to the send history (last 5 sends). */
+    /** Appends one entry to the send history (last 10 sends). */
     public static function addHistory(string $subject, int $sent, int $errors): void
     {
         $cfg  = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['send_history']);
@@ -486,24 +462,105 @@ class PluginMailblastMailblast extends CommonGLPI
         if (!is_array($list)) $list = [];
 
         array_unshift($list, [
-            'date'    => gmdate('Y-m-d H:i', time() - (7 * 3600)),
+            'date'    => date('Y-m-d H:i'),
             'subject' => strip_tags(html_entity_decode($subject, ENT_QUOTES, 'UTF-8')),
             'sent'    => $sent,
             'errors'  => $errors,
         ]);
 
-        $list = array_slice($list, 0, 5);
+        $list = array_slice($list, 0, 10);
         Config::setConfigurationValues(self::CONFIG_CONTEXT, [
             'send_history' => json_encode($list),
         ]);
     }
 
-    /** Returns the last 5 sends as array. */
+    /** Returns the last 10 sends as array. */
     public static function getHistory(): array
     {
         $cfg  = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['send_history']);
         $list = json_decode((string) ($cfg['send_history'] ?? '[]'), true);
         return is_array($list) ? $list : [];
+    }
+
+    // ─── Cooldown protection ─────────────────────────────────────────────
+
+    /**
+     * Returns an error string if a new send cannot start yet, null otherwise.
+     * Prevents accidental duplicate mass sends from concurrent browser tabs.
+     */
+    public static function checkCooldown(int $cooldownSeconds = 30): ?string
+    {
+        $cfg     = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['last_send_at']);
+        $lastAt  = (int) ($cfg['last_send_at'] ?? 0);
+        $elapsed = time() - $lastAt;
+
+        if ($lastAt > 0 && $elapsed < $cooldownSeconds) {
+            $remaining = $cooldownSeconds - $elapsed;
+            return sprintf(
+                __('Please wait %d seconds before sending again.', 'mailblast'),
+                $remaining
+            );
+        }
+
+        return null;
+    }
+
+    /** Records the completion timestamp of a mass send for cooldown enforcement. */
+    public static function recordSendCompleted(): void
+    {
+        Config::setConfigurationValues(self::CONFIG_CONTEXT, ['last_send_at' => time()]);
+    }
+
+    // ─── Upload validation ────────────────────────────────────────────────
+
+    /**
+     * Validates a multi-file upload from $_FILES.
+     *
+     * @param  array $files        The $_FILES['field'] structure (multi-file).
+     * @param  array $allowedMimes MIME types allowed by GLPI.
+     * @return array{accepted: array<array{tmp:string,name:string,mime:string}>, rejected: string[]}
+     */
+    public static function validateUploadedFiles(array $files, array $allowedMimes): array
+    {
+        $accepted   = [];
+        $rejected   = [];
+        $maxBytes   = self::getMaxAttachmentMb() * 1024 * 1024;
+        $totalBytes = 0;
+
+        $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
+        for ($i = 0; $i < $count; $i++) {
+            $errCode = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+            if ($errCode === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if ($errCode !== UPLOAD_ERR_OK) {
+                $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('Upload error', 'mailblast');
+                continue;
+            }
+
+            $tmpPath  = (string) ($files['tmp_name'][$i] ?? '');
+            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) ?: 'application/octet-stream';
+
+            if (!in_array($realMime, $allowedMimes, true)) {
+                $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('File type not allowed', 'mailblast');
+                continue;
+            }
+
+            $fileSize    = (int) ($files['size'][$i] ?? 0);
+            $totalBytes += $fileSize;
+            if ($totalBytes > $maxBytes) {
+                $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('Attachment size limit exceeded', 'mailblast');
+                continue;
+            }
+
+            $accepted[] = [
+                'tmp'  => $tmpPath,
+                'name' => (string) ($files['name'][$i] ?? 'attachment'),
+                'mime' => $realMime,
+            ];
+        }
+
+        return ['accepted' => $accepted, 'rejected' => $rejected];
     }
 
     // ─── Image embedding ─────────────────────────────────────────────────
@@ -583,7 +640,14 @@ class PluginMailblastMailblast extends CommonGLPI
         }
 
         $row      = $iterator->current();
-        $fullPath = GLPI_DOC_DIR . '/' . $row['filepath'];
+        $rawPath  = GLPI_DOC_DIR . '/' . $row['filepath'];
+        $fullPath = realpath($rawPath);
+        $docBase  = realpath(GLPI_DOC_DIR);
+
+        if ($fullPath === false || $docBase === false
+            || !str_starts_with($fullPath, $docBase . DIRECTORY_SEPARATOR)) {
+            return null;
+        }
 
         if (!file_exists($fullPath) || !is_readable($fullPath)) {
             return null;
@@ -693,6 +757,8 @@ class PluginMailblastMailblast extends CommonGLPI
         $text = preg_replace('/<\/tr>/i',               "\n",       $text);
         $text = preg_replace('/<\/li>/i',               "\n",       $text);
         $text = preg_replace('/<li[^>]*>/i',             "  • ",      $text);
+        $text = preg_replace('/<\/t[dh]>/i',              "\t",        $text);
+        $text = preg_replace('/<t[dh][^>]*>/i',           '',          $text);
 
         // Strip remaining tags, then decode entities
         $text = strip_tags($text);
@@ -757,7 +823,7 @@ class PluginMailblastMailblast extends CommonGLPI
         );
 
         // sendMails is only called for test sends — single recipient always.
-        $recipients = [['email' => $testEmail, 'name' => 'Test']];
+        $recipients = [['email' => $testEmail, 'name' => $testEmail]];
 
         $sent   = 0;
         $errors = [];

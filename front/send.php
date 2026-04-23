@@ -30,7 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $subject = trim(strip_tags($_POST['subject'] ?? ''));
     $body    = (string) ($_POST['body']   ?? '');  // HTML from TinyMCE — do NOT strip_tags
-    $footer  = trim((string) ($_POST['footer'] ?? ''));
+    $rawFooter = (string) ($_POST['footer'] ?? '');
+    $rawFooter = strip_tags($rawFooter, ['b', 'i', 'u', 'strong', 'em', 'br']);
+    $footer    = trim((string) preg_replace('/<(b|i|u|strong|em|br)(\s[^>]*)>/i', '<$1>', $rawFooter));
     $action  = (string) ($_POST['action'] ?? '');
 
     // ── AJAX actions ─────────────────────────────────────────────────────
@@ -98,7 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($bytes === false || $bytes === '') continue;
             $tmp = @tempnam(sys_get_temp_dir(), 'mb_test_');
             if ($tmp !== false && @file_put_contents($tmp, $bytes) !== false) {
-                $tmpAtts[] = ['tmp' => $tmp, 'name' => $att['name'], 'mime' => $att['mime']];
+                $realMime  = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: 'application/octet-stream';
+                $tmpAtts[] = ['tmp' => $tmp, 'name' => $att['name'], 'mime' => $realMime];
             }
         }
 
@@ -130,6 +133,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'queue_init') {
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
+        // Cooldown check — prevents accidental duplicate sends from concurrent tabs.
+        $cooldownErr = PluginMailblastMailblast::checkCooldown();
+        if ($cooldownErr !== null) {
+            mb_clean_buffers();
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $cooldownErr, 'csrf' => Session::getNewCSRFToken()]);
+            exit;
+        }
+
+        // Body size guard — the body HTML is re-posted on every batch call.
+        $maxBodyBytes = PluginMailblastMailblast::getMaxAttachmentMb() * 1024 * 1024;
+        if (strlen($body) > $maxBodyBytes) {
+            mb_clean_buffers();
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => __('Message body is too large.', 'mailblast'), 'csrf' => Session::getNewCSRFToken()]);
+            exit;
+        }
+
         // Decode base64 attachments from JS RAM into per-request temp files.
         // Attachments travel as base64 JSON (same pattern as test_send),
         // never via $_FILES — avoids browser issues with DataTransfer file inputs.
@@ -141,7 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($bytes === false || $bytes === '') continue;
             $tmp = @tempnam(sys_get_temp_dir(), 'mb_qi_');
             if ($tmp !== false && @file_put_contents($tmp, $bytes) !== false) {
-                $tmpAtts[] = ['tmp' => $tmp, 'name' => $att['name'], 'mime' => $att['mime']];
+                $realMime  = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: 'application/octet-stream';
+                $tmpAtts[] = ['tmp' => $tmp, 'name' => $att['name'], 'mime' => $realMime];
             }
         }
 
@@ -166,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'generate_report') {
         $rows    = array_slice(json_decode((string) ($_POST['rows'] ?? '[]'), true) ?? [], 0, 10000);
         $subject = trim(strip_tags((string) ($_POST['subject'] ?? '')));
-        $stamp   = gmdate('Y-m-d H:i', time() - (7 * 3600)); // GMT-7
+        $stamp   = date('Y-m-d H:i');
 
         $spread = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $spread->getProperties()
@@ -249,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attB64 = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
 
         // Validate sendId: only hex chars and dashes, 8-40 chars
-        if ($sendId === '' || !preg_match('/^[0-9a-f-]{8,40}$/', $sendId)) {
+        if ($sendId === '' || !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $sendId)) {
             mb_clean_buffers();
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => __('Missing send_id', 'mailblast')]);
@@ -376,6 +398,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
+        }
+
+        if ($action === 'send_all') {
+            Session::addMessageAfterRedirect(
+                __('Mass send requires JavaScript to be enabled.', 'mailblast'),
+                false,
+                ERROR
+            );
         }
     }
 
@@ -592,8 +622,8 @@ $(function() {
               class="p-2"
               style="min-height:80px;outline:none;font-family:inherit;font-size:inherit;line-height:1.5;white-space:pre-wrap;word-break:break-word"
             ><?php
-              // Convert saved HTML to safe contenteditable content
-              $footerHtml = $savedForm['footer'];
+              // Sanitize saved footer to allowed formatting tags only (belt-and-suspenders)
+              $footerHtml = strip_tags($savedForm['footer'], ['b', 'i', 'u', 'strong', 'em', 'br']);
               // Restore line breaks as <br> if not already present
               if ($footerHtml !== '' && strpos($footerHtml, '<br') === false && strpos($footerHtml, '<p') === false) {
                   $footerHtml = nl2br($footerHtml);
@@ -1070,7 +1100,11 @@ $(function() {
       if (dup) continue;
       if (totalAttachmentSize() + f.size > limitBytes) {
         const msg = <?php echo json_encode(__('Attachment size limit exceeded (%s MB max). File not added: %s', 'mailblast')); ?>;
-        alert(msg.replace('%s', _mbMaxAttMb).replace('%s', f.name));
+        (function(m) {
+          var fa = document.getElementById('mb_formAlert');
+          if (fa) { fa.textContent = m; fa.style.display = ''; fa.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+          else { console.warn('Mail Blast: ' + m); }
+        })(msg.replace('%s', _mbMaxAttMb).replace('%s', f.name));
         continue;
       }
       selectedFiles.items.add(f);

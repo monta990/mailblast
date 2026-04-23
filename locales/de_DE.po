@@ -329,5 +329,29 @@ msgstr "Verfügbare Platzhalter: {nombre}, {nombre_completo}, {email}"
 msgid "Last 5 mass sends"
 msgstr "Letzte 5 Massenversendungen"
 
+msgid "Last 10 mass sends"
+msgstr "Letzte 10 Massenversendungen"
+
 msgid "No sends recorded yet. History is populated after each mass mailing."
 msgstr "Noch keine Sendungen aufgezeichnet. Der Verlauf wird nach jedem Massenversand befüllt."
+
+msgid "File type not allowed"
+msgstr "Dateityp nicht erlaubt"
+
+msgid "Upload error"
+msgstr "Upload-Fehler"
+
+msgid "Attachment size limit exceeded"
+msgstr "Anhanggröße überschritten"
+
+msgid "Mass send requires JavaScript to be enabled."
+msgstr "Massenversand erfordert aktiviertes JavaScript."
+
+msgid "Message body is too large."
+msgstr "Der Nachrichtentext ist zu groß."
+
+msgid "Please wait %d seconds before sending again."
+msgstr "Bitte %d Sekunden warten, bevor Sie erneut senden."
+
+msgid "server time"
+msgstr "Serverzeit"

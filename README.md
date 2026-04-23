@@ -44,6 +44,9 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | **Configurable batch size** | Batch size and inter-batch delay adjustable from the plugin configuration page |
 | **Form persistence** | Subject and footer saved in `glpi_configs` and restored on next visit |
 | **Multi-send safe** | CSRF token rotated after each AJAX call |
+| **Cooldown protection** | 30-second cooldown after each send prevents accidental duplicate blasts from concurrent browser tabs |
+| **Duplicate recipient guard** | Within-batch deduplication skips users sharing an email address so no recipient receives the same message twice |
+| **Send history** | Last 10 mass sends stored and displayed on the configuration page (date, subject, sent count, failed count) with server-timezone timestamps |
 | **Full i18n** | `es_MX`, `fr_FR`, `de_DE` |
 
 ---
@@ -125,6 +128,8 @@ Access the configuration page via the **gear icon** in the plugin list (*Setup �
 | **Batch size** | 15 | 1–100 | Number of emails sent per batch. Lower values reduce SMTP load on slow servers; higher values speed up large sends. |
 | **Delay between batches** | 120 ms | 0–5000 ms | Wait time between consecutive batches. Increase this if your SMTP provider enforces rate limits (e.g. 500 ms for restrictive providers). |
 | **Max attachment size** | 15 MB | 1–100 MB | Maximum combined size of all attachments. Enforced in the browser. Prevents SMTP timeouts caused by large payloads being sent to hundreds of recipients. |
+
+The configuration page also shows a **send history** table with the last 10 mass sends (date, subject, sent count, failed count). Timestamps use the server's configured PHP timezone; the column header shows the timezone identifier for clarity.
 
 ---
 
