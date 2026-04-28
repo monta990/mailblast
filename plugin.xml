@@ -28,7 +28,7 @@ Send a bulk email to every active GLPI user that has a default email address reg
 - **Test send** — send to your own admin address or any specific address before the mass mailing
 - **Form persistence** — subject and footer saved automatically and restored on next visit
 - **Dark/light mode** — fully theme-aware
-- **Fully localized** — es_MX, en_US, en_GB, fr_FR, de_DE
+- **Fully localized** — en (base), es_MX, fr_FR, de_DE
          </en>
          <es_MX>
 ## Mail Blast
@@ -46,7 +46,7 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
 - **Correo de prueba** — envía a tu dirección de administrador o a una dirección específica antes del envío masivo
 - **Persistencia del formulario** — asunto y pie guardados automáticamente y restaurados en la siguiente visita
 - **Modo oscuro/claro** — compatible con ambos temas de GLPI
-- **Completamente localizado** — es_MX, en_US, en_GB, fr_FR, de_DE
+- **Completamente localizado** — en (base), es_MX, fr_FR, de_DE
          </es_MX>
       </long>
    </description>
@@ -71,8 +71,6 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
    </versions>
    <langs>
       <lang>es_MX</lang>
-      <lang>en_US</lang>
-      <lang>en_GB</lang>
       <lang>fr_FR</lang>
       <lang>de_DE</lang>
    </langs>

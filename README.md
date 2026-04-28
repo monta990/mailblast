@@ -47,7 +47,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | **Cooldown protection** | 30-second cooldown after each send prevents accidental duplicate blasts from concurrent browser tabs |
 | **Duplicate recipient guard** | Within-batch deduplication skips users sharing an email address so no recipient receives the same message twice |
 | **Send history** | Last 10 mass sends stored and displayed on the configuration page (date, subject, sent count, failed count) with server-timezone timestamps |
-| **Full i18n** | `es_MX`, `fr_FR`, `de_DE` |
+| **Full i18n** | Base language: `en` (without dedicated `.po/.mo`); translations: `es_MX`, `fr_FR`, `de_DE` |
 
 ---
 
