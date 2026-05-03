@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.0] — 2026-05-02
+
+### Added
+- **Twig templates.** HTML output migrated from inline PHP `echo` strings to Twig templates. All business logic, POST handlers, and redirects remain in PHP — only the HTML layer moved to Twig.
+
+---
+
 ## [1.6.1] — 2026-04-22
 
 ### Added
