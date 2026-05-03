@@ -8,8 +8,6 @@
       <short>
          <en>Send bulk HTML emails to all active GLPI users with a registered address.</en>
          <es_MX>Envía correos HTML masivos a todos los usuarios activos de GLPI con correo registrado.</es_MX>
-         <fr_FR>Envoyez des e-mails HTML en masse à tous les utilisateurs GLPI actifs ayant une adresse enregistrée.</fr_FR>
-         <de_DE>Massen-HTML-E-Mails an alle aktiven GLPI-Benutzer mit registrierter Adresse senden.</de_DE>
       </short>
       <long>
          <en>
