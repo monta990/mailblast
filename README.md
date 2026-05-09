@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI compatibility"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI 11 compatibility"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-11.0%2B-blue?style=flat-square" alt="GLPI 12 compatibility"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v3%2B-green?style=flat-square" alt="License"></a>
   <a href="https://php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-%3E%3D8.2-purple?style=flat-square" alt="PHP"></a>
   <a href="https://github.com/monta990/mailblast/releases" target="_blank"><img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/monta990/mailblast/total"></a>
@@ -55,7 +56,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
 | Requirement | Version |
 |---|---|
-| GLPI | ≥ 11.0.0 |
+| GLPI | ≥ 11.0 |
 | PHP | ≥ 8.2 |
 | SMTP | Must be configured under *Setup → Notifications → Email followups* |
 

@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.1] — 2026-05-08
+
+### Changed
+
+- **Plugin web directory** — replaced deprecated `Plugin::getWebDir()` with a new `plugin_mailblast_web_dir()`. The helper derives the correct web path from `__DIR__` relative to `GLPI_ROOT`, so it works whether the plugin is installed in `plugins/` or `marketplace/`. `Plugin::getWebDir()` is removed in GLPI 12.
+- **Not-found guard** — replaced removed `Html::displayNotFoundError()` with `throw new \Glpi\Exception\Http\NotFoundHttpException()` in `front/config.php`. The exception class is available in both GLPI 11 and 12.
+- **GLPI version range** — `PLUGIN_MAILBLAST_MAX_GLPI` raised from `11.99.99` to `12.99.99`; plugin now officially supports GLPI 11 and 12.
+
+---
+
 ## [1.7.0] — 2026-05-02
 
 ### Added

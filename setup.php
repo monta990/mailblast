@@ -5,9 +5,9 @@
  * @author  Edwin Elias Alvarez
  * @license GPL-3.0-or-later
  */
-define('PLUGIN_MAILBLAST_VERSION',  '1.7.0');
+define('PLUGIN_MAILBLAST_VERSION',  '1.7.1');
 define('PLUGIN_MAILBLAST_MIN_GLPI', '11.0.0');
-define('PLUGIN_MAILBLAST_MAX_GLPI', '11.99.99');
+define('PLUGIN_MAILBLAST_MAX_GLPI', '12.99.99');
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +51,23 @@ function plugin_mailblast_check_prerequisites(): bool
 function plugin_mailblast_check_config(bool $verbose = false): bool
 {
     return true;
+}
+
+/**
+ * Returns the plugin web root (e.g. /glpi/plugins/mailblast or /glpi/marketplace/mailblast).
+ * Uses GLPI_MARKETPLACE_DIR to detect location — avoids realpath/symlink issues.
+ */
+function plugin_mailblast_web_dir(): string
+{
+    global $CFG_GLPI;
+    $plugin_dir     = str_replace('\\', '/', __DIR__);
+    $marketplace_dir = defined('GLPI_MARKETPLACE_DIR')
+        ? str_replace('\\', '/', GLPI_MARKETPLACE_DIR)
+        : null;
+    $subdir = ($marketplace_dir && str_starts_with($plugin_dir, $marketplace_dir))
+        ? 'marketplace'
+        : 'plugins';
+    return $CFG_GLPI['root_doc'] . '/' . $subdir . '/mailblast';
 }
 
 // ─── Initialisation (called by GLPI on every page load) ──────────────────────

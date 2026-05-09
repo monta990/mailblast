@@ -8,9 +8,22 @@
  * @license GPL-3.0-or-later
  */
 
-class PluginMailblastMailblast extends CommonGLPI
+// GLPI 11 declares $rightname without a type; GLPI 12 adds `string`.
+// PHP forbids adding or removing a type annotation in a child class,
+// so we use a version-conditional abstract shim as the direct parent.
+// Use (int) cast — version_compare treats '12.0.0-dev' < '12.0.0' (false negative).
+if ((int) GLPI_VERSION >= 12) {
+    abstract class PluginMailblastBase extends CommonGLPI {
+        public static string $rightname = 'config';
+    }
+} else {
+    abstract class PluginMailblastBase extends CommonGLPI {
+        public static $rightname = 'config';
+    }
+}
+
+class PluginMailblastMailblast extends PluginMailblastBase
 {
-    public static $rightname = 'config';
 
     private const CONFIG_CONTEXT = 'plugin:mailblast';
 
@@ -27,10 +40,10 @@ class PluginMailblastMailblast extends CommonGLPI
 
         if (Session::haveRight('config', UPDATE)) {
             $menu['title'] = self::getTypeName();
-            $menu['page']  = Plugin::getWebDir('mailblast', false) . '/front/send.php';
+            $menu['page']  = plugin_mailblast_web_dir() . '/front/send.php';
             $menu['icon']  = 'ti ti-mail-forward';
 
-            $menu['links']['config'] = Plugin::getWebDir('mailblast', false) . '/front/send.php';
+            $menu['links']['config'] = plugin_mailblast_web_dir() . '/front/send.php';
         }
 
         return $menu;

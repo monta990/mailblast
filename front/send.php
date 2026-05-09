@@ -424,8 +424,8 @@ $myEmail       = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
 $savedForm     = PluginMailblastMailblast::loadFormConfig();
 $cfgBatchDelay = PluginMailblastMailblast::getBatchDelayMs();
 $cfgMaxAttMb   = PluginMailblastMailblast::getMaxAttachmentMb();
-$formAction    = Plugin::getWebDir('mailblast') . '/front/send.php';
-$pluginWebDir  = Plugin::getWebDir('mailblast');
+$formAction    = plugin_mailblast_web_dir() . '/front/send.php';
+$pluginWebDir  = plugin_mailblast_web_dir();
 
 Html::header(__('Mail Blast', 'mailblast'), $_SERVER['PHP_SELF'], 'admin', 'PluginMailblastMailblast');
 Html::displayMessageAfterRedirect();
@@ -570,6 +570,7 @@ $(function() {
     'editor_html'    => $editorHtml,
     'footer_html'    => $footerHtml,
     'can_config'     => Session::haveRight('config', UPDATE),
+    'plugin_web_dir' => $pluginWebDir,
     'csrf_token'     => Session::getNewCSRFToken(),
 ]);
 

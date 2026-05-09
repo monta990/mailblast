@@ -15,7 +15,7 @@ global $CFG_GLPI;
 
 $plugin = new Plugin();
 if (!$plugin->isActivated('mailblast')) {
-    Html::displayNotFoundError();
+    throw new \Glpi\Exception\Http\NotFoundHttpException();
 }
 
 $saved = false;
@@ -71,7 +71,7 @@ $history = PluginMailblastMailblast::getHistory();
     'user_count'    => PluginMailblastMailblast::countActiveUsersWithEmail(),
     'history'       => $history,
     'timezone'      => date_default_timezone_get(),
-    'send_url'      => Plugin::getWebDir('mailblast') . '/front/send.php',
+    'send_url'      => plugin_mailblast_web_dir() . '/front/send.php',
     'csrf_token'    => Session::getNewCSRFToken(),
     'save_label'    => _sx('button', 'Save'),
 ]);
