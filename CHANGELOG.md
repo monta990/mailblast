@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.2] — 2026-05-09
+
+### Fixed
+
+- **Pasted image dimensions** — TinyMCE no longer requires manual resize after pasting an image. A `PastePostProcess` hook now reads `naturalWidth`/`naturalHeight` and sets explicit `width`/`height` attributes on any pasted `<img>` that lacks them.
+
+---
+
 ## [1.7.1] — 2026-05-08
 
 ### Changed

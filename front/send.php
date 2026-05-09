@@ -475,7 +475,7 @@ echo Html::scriptBlock('window.mbConfig = ' . json_encode([
         'megabytes'       => __('MB', 'mailblast'),
         'networkError'    => __('Network error', 'mailblast'),
         'jsInitError'     => __('Initialization error', 'mailblast'),
-        'cancelling'      => __('Cancellingâ€¦', 'mailblast'),
+        'cancelling'      => __('Cancelling…', 'mailblast'),
         'cancelConfirm'   => __('Cancel sending? Emails already sent will not be recalled.', 'mailblast'),
         'badResponse'     => __('Bad server response', 'mailblast'),
         'serverError'     => __('Server error', 'mailblast'),
@@ -483,15 +483,15 @@ echo Html::scriptBlock('window.mbConfig = ' . json_encode([
         'queueBatchFail'  => __('Batch failed', 'mailblast'),
         'attSizeLimit'    => __('Attachment size limit exceeded (%s MB max). File not added: %s', 'mailblast'),
         'sendingCancelled'=> __('Sending cancelled.', 'mailblast'),
-        'sendingFailed'   => __('Sending failed â€” no emails were delivered.', 'mailblast'),
+        'sendingFailed'   => __('Sending failed — no emails were delivered.', 'mailblast'),
         'sent'            => __('sent', 'mailblast'),
         'failed'          => __('failed', 'mailblast'),
         'allSent'         => __('All emails sent successfully.', 'mailblast'),
-        'generating'      => __('Generatingâ€¦', 'mailblast'),
+        'generating'      => __('Generating…', 'mailblast'),
         'cancel'          => __('Cancel', 'mailblast'),
         'sendingEmails'   => __('Sending emails', 'mailblast'),
         'noActiveUsers'   => __('No active users with registered email found', 'mailblast'),
-        'sending'         => __('Sendingâ€¦', 'mailblast'),
+        'sending'         => __('Sending…', 'mailblast'),
         'testSent'        => __('Test sent successfully', 'mailblast'),
         'testFailed'      => __('Test failed', 'mailblast'),
     ],
@@ -552,6 +552,20 @@ $(function() {
                     });
                 });
             }
+        });
+
+        editor.on("PastePostProcess", function(e) {
+            Array.from(e.node.querySelectorAll("img")).forEach(function(img) {
+                if (!img.getAttribute("width") && !img.getAttribute("height")) {
+                    var applyDims = function() {
+                        if (img.naturalWidth) {
+                            img.setAttribute("width", img.naturalWidth);
+                            img.setAttribute("height", img.naturalHeight);
+                        }
+                    };
+                    img.complete ? applyDims() : img.addEventListener("load", applyDims, {once: true});
+                }
+            });
         });
     };
 
