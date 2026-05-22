@@ -581,6 +581,7 @@ $(function() {
     'my_email'       => $myEmail,
     'saved_form'     => $savedForm,
     'max_att_mb'     => $cfgMaxAttMb,
+    'mb_body_id'     => $mb_body_id,
     'editor_html'    => $editorHtml,
     'footer_html'    => $footerHtml,
     'can_config'     => Session::haveRight('config', UPDATE),
