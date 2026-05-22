@@ -60,7 +60,7 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
          <num>1.7.3</num>
          <compatibility>~11.0</compatibility>
          <compatibility>~12.0</compatibility>
-         <download_url>https://github.com/monta990/mailblast/releases/download/1.7.2/mailblast-1.7.3.zip</download_url>
+         <download_url>https://github.com/monta990/mailblast/releases/download/1.7.3/mailblast-1.7.3.zip</download_url>
       </version>
    </versions>
    <langs>
