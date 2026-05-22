@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.3] — 2026-05-22
+
+### Fixed
+
+- **Accessibility** — "Message body" `<label>` now has a `for` attribute matching the TinyMCE textarea id, resolving the unlabelled form field warning.
+
+---
+
 ## [1.7.2] — 2026-05-09
 
 ### Fixed
