@@ -428,7 +428,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
         }
 
-        $iterator = $DB->request([
+        $needsDedup = ($filterType === 'entities' || $filterType === 'profiles') && !empty($filterIds);
+        $qSpec = [
             'SELECT'    => ['ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
             'FROM'      => 'glpi_useremails AS ue',
             'LEFT JOIN' => $qJoin,
@@ -436,7 +437,11 @@ class PluginMailblastMailblast extends PluginMailblastBase
             'ORDER'     => ['u.id ASC'],
             'LIMIT'     => $batchSize,
             'START'     => $offset,
-        ]);
+        ];
+        if ($needsDedup) {
+            $qSpec['GROUPBY'] = ['u.id'];
+        }
+        $iterator = $DB->request($qSpec);
 
         $errorList  = [];
         $sentList   = [];
