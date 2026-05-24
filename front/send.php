@@ -179,7 +179,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'total'           => $init['total'],
             'html'            => $init['html'],
             'plain'           => $init['plain'],
-            'attachments_b64' => $init['attachments_b64'],
+            'attachments_b64'   => $init['attachments_b64'],
+            'inline_images_b64' => $init['inline_images_b64'] ?? [],
             'csrf'            => Session::getNewCSRFToken(),
         ]);
         exit;
@@ -267,8 +268,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $offset = max(0, (int) ($_POST['offset'] ?? 0));
         $html   = (string) ($_POST['html']  ?? '');
         $plain  = (string) ($_POST['plain'] ?? '');
-        $attRaw = (string) ($_POST['attachments_b64'] ?? '');
-        $attB64 = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
+        $attRaw    = (string) ($_POST['attachments_b64']   ?? '');
+        $attB64    = $attRaw    !== '' ? (json_decode($attRaw,    true) ?? []) : [];
+        $inlineRaw = (string) ($_POST['inline_images_b64'] ?? '');
+        $inlineB64 = $inlineRaw !== '' ? (json_decode($inlineRaw, true) ?? []) : [];
 
         // Validate sendId: only hex chars and dashes, 8-40 chars
         if ($sendId === '' || !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $sendId)) {
@@ -285,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, PluginMailblastMailblast::getBatchSize());
+        $result = PluginMailblastMailblast::processBatch($sendId, $html, $plain, $attB64, $offset, PluginMailblastMailblast::getBatchSize(), $inlineB64);
         $result['csrf'] = Session::getNewCSRFToken();
         mb_clean_buffers();
         header('Content-Type: application/json');
