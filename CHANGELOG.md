@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.4] — 2026-05-24
+
+### Fixed
+
+- **SMTP leak** — `sendMails()` now calls `$transport->stop()` after sending, matching the pattern already used in `processBatch()`.
+- **WHERE clause** — `cleanupStaleJobs()` LIKE condition was nested inside an anonymous array, causing it to be silently ignored; flattened to correct syntax.
+- **Namespace** — `finfo` corrected to `\finfo` to avoid resolution failure in namespaced context.
+
+---
+
 ## [1.7.3] — 2026-05-22
 
 ### Fixed
