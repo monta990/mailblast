@@ -212,8 +212,9 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
         }
 
-        $htmlBody = self::embedImagesAsBase64($htmlBody);
-        $fullHtml = self::buildHtmlBody($htmlBody, $footer);
+        $inlineResult = self::extractInlineImages($htmlBody);
+        $htmlBody     = $inlineResult['html'];
+        $fullHtml     = self::buildHtmlBody($htmlBody, $footer);
         $total    = self::countActiveUsersWithEmail();
 
         // Purge stale jobs before registering the new one — prevents the new
@@ -235,11 +236,12 @@ class PluginMailblastMailblast extends PluginMailblastBase
         ]);
 
         return [
-            'send_id'         => $sendId,
-            'total'           => $total,
-            'html'            => $fullHtml,
-            'plain'           => self::html2text($fullHtml),
-            'attachments_b64' => $attachmentsB64,
+            'send_id'           => $sendId,
+            'total'             => $total,
+            'html'              => $fullHtml,
+            'plain'             => self::html2text($fullHtml),
+            'attachments_b64'   => $attachmentsB64,
+            'inline_images_b64' => $inlineResult['inlineImages'],
         ];
     }
 
@@ -254,11 +256,12 @@ class PluginMailblastMailblast extends PluginMailblastBase
      */
     public static function processBatch(
         string $sendId,
-        string $html           = '',
-        string $plain          = '',
-        array  $attachmentsB64 = [],
-        int    $offset         = 0,
-        int    $batchSize      = 15
+        string $html            = '',
+        string $plain           = '',
+        array  $attachmentsB64  = [],
+        int    $offset          = 0,
+        int    $batchSize       = 15,
+        array  $inlineImagesB64 = []
     ): array {
         global $DB;
 
@@ -320,6 +323,18 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
         }
 
+        $inlineImages = [];
+        foreach ($inlineImagesB64 as $img) {
+            $imgBytes = base64_decode($img['data'] ?? '', true);
+            if ($imgBytes !== false && $imgBytes !== '') {
+                $inlineImages[] = [
+                    'cid'   => (string) ($img['cid']  ?? ''),
+                    'bytes' => $imgBytes,
+                    'mime'  => (string) ($img['mime'] ?? 'application/octet-stream'),
+                ];
+            }
+        }
+
         // Create transport once for the whole batch — one SMTP handshake per batch.
         $transport = \Symfony\Component\Mailer\Transport::fromDsn(GLPIMailer::buildDsn(true));
 
@@ -363,7 +378,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 $subject
             );
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles
+                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages
             );
 
             if ($err === null) {
@@ -587,29 +602,32 @@ class PluginMailblastMailblast extends PluginMailblastBase
      * serve no further purpose — leaving them orphaned in glpi_documents would
      * accumulate indefinitely with no way to identify them manually.
      */
-    public static function embedImagesAsBase64(string $html): string
+    public static function extractInlineImages(string $html): array
     {
         $pattern = "/(<img[^>]+src=[\"'])([^\"']*?docid=(\\d+)[^\"']*?)([\"'][^>]*>)/i";
+        $images  = [];
 
-        return preg_replace_callback(
+        $html = (string) preg_replace_callback(
             $pattern,
-            function (array $m) {
-                $docId    = (int) $m[3];
-                $embedded = self::docIdToBase64($docId);
+            function (array $m) use (&$images) {
+                $docId  = (int) $m[3];
+                $result = self::docIdToBytes($docId);
 
-                if ($embedded === null) {
+                if ($result === null) {
                     return $m[0];
                 }
 
-                // Delete the document now that it is embedded as base64.
-                // It was uploaded solely for composing this email and would
-                // otherwise remain as an orphan in glpi_documents indefinitely.
                 self::purgeDocument($docId);
 
-                return $m[1] . $embedded . $m[4];
+                $cid          = 'mailblast_img_' . $docId;
+                $images[$cid] = ['cid' => $cid, 'data' => base64_encode($result['bytes']), 'mime' => $result['mime']];
+
+                return $m[1] . 'cid:' . $cid . $m[4];
             },
             $html
         );
+
+        return ['html' => $html, 'inlineImages' => array_values($images)];
     }
 
     private static function purgeDocument(int $docId): void
@@ -638,7 +656,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
         $DB->delete('glpi_documents', ['id' => $docId]);
     }
 
-    private static function docIdToBase64(int $docId): ?string
+    private static function docIdToBytes(int $docId): ?array
     {
         global $DB;
 
@@ -674,7 +692,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes)
               ?: ((string) ($row['mime'] ?? 'application/octet-stream'));
 
-        return 'data:' . $mime . ';base64,' . base64_encode($bytes);
+        return ['bytes' => $bytes, 'mime' => $mime];
     }
 
     // ─── Mail helpers ─────────────────────────────────────────────────────
@@ -706,7 +724,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $subject,
         string $html,
         string $plain,
-        array  $attachments = []
+        array  $attachments  = [],
+        array  $inlineImages = []
     ): ?string {
         global $CFG_GLPI;
 
@@ -728,12 +747,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
 
             $email->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
                   ->subject($subject)
-                  ->html($html)
                   ->text($plain);
 
-            // Attach files: read bytes eagerly so there is no lazy-load / file-path
-            // timing issue.  Email::attach($bytes, $name, $mime) is the most reliable
-            // Symfony Mime API — identical to how GLPI core attaches documents.
             foreach ($attachments as $att) {
                 if (!isset($att['path']) || !file_exists($att['path'])) {
                     throw new \RuntimeException(
@@ -749,6 +764,20 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 $email->attach($bytes, $att['name'], $att['mime']);
             }
 
+            if ($inlineImages) {
+                foreach ($inlineImages as $img) {
+                    $email->embed($img['bytes'], $img['cid'], $img['mime']);
+                }
+                $allParts = $email->getAttachments();
+                $imgStart = count($allParts) - count($inlineImages);
+                $cidMap   = [];
+                foreach ($inlineImages as $i => $img) {
+                    $cidMap['cid:' . $img['cid']] = 'cid:' . $allParts[$imgStart + $i]->getContentId();
+                }
+                $html = str_replace(array_keys($cidMap), array_values($cidMap), $html);
+            }
+
+            $email->html($html);
             $transport->send($email);
             return null;
 
@@ -825,11 +854,18 @@ class PluginMailblastMailblast extends PluginMailblastBase
         bool   $testMode    = false,
         string $testEmail   = ''
     ): array {
-        $htmlBody  = self::embedImagesAsBase64($htmlBody);
+        $inlineResult = self::extractInlineImages($htmlBody);
+        $htmlBody     = $inlineResult['html'];
+        $inlineImages = [];
+        foreach ($inlineResult['inlineImages'] as $img) {
+            $imgBytes = base64_decode($img['data'], true);
+            if ($imgBytes !== false && $imgBytes !== '') {
+                $inlineImages[] = ['cid' => $img['cid'], 'bytes' => $imgBytes, 'mime' => $img['mime']];
+            }
+        }
         $fullHtml  = self::buildHtmlBody($htmlBody, $footer);
         $plainText = self::html2text($fullHtml);
 
-        // Map attachments to the {path, name, mime} shape sendSymfonyEmail expects.
         $attPaths = array_map(
             fn($a) => ['path' => $a['tmp'], 'name' => $a['name'], 'mime' => $a['mime']],
             $attachments
@@ -854,7 +890,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
 
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths
+                $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths, $inlineImages
             );
 
             if ($err === null) {

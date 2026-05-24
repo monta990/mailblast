@@ -10,6 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Outlook mobile images** — inline images now sent as CID MIME parts (`Content-ID`) instead of base64 data URIs. Outlook mobile (and many other clients) strip `data:` URIs regardless of image size; CID attachments render correctly.
 - **SMTP leak** — `sendMails()` now calls `$transport->stop()` after sending, matching the pattern already used in `processBatch()`.
 - **WHERE clause** — `cleanupStaleJobs()` LIKE condition was nested inside an anonymous array, causing it to be silently ignored; flattened to correct syntax.
 - **Namespace** — `finfo` corrected to `\finfo` to avoid resolution failure in namespaced context.

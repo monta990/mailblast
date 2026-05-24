@@ -203,7 +203,7 @@
     let _ticker        = null;
     let _cancelStep    = 0;
 
-    let _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [];
+    let _sendId = '', _qHtml = '', _qPlain = '', _qAttB64 = [], _qInlineB64 = [];
     let _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
     let _reportRows = [];
 
@@ -353,7 +353,8 @@
       fd.append('offset',          offset);
       fd.append('html',            _qHtml);
       fd.append('plain',           _qPlain);
-      fd.append('attachments_b64', JSON.stringify(_qAttB64));
+      fd.append('attachments_b64',   JSON.stringify(_qAttB64));
+      fd.append('inline_images_b64', JSON.stringify(_qInlineB64));
 
       doFetch(fd,
         function(data) {
@@ -417,7 +418,8 @@
       _sendId  = '';
       _qHtml   = '';
       _qPlain  = '';
-      _qAttB64 = [];
+      _qAttB64    = [];
+      _qInlineB64 = [];
       _startTime = Date.now();
 
       setStatus('');
@@ -495,7 +497,8 @@
             _sendId  = data.send_id || '';
             _qHtml   = data.html    || '';
             _qPlain  = data.plain   || '';
-            _qAttB64 = data.attachments_b64 || [];
+            _qAttB64    = data.attachments_b64   || [];
+            _qInlineB64 = data.inline_images_b64 || [];
             setCounters(0, 0, _total);
             var lbl2 = $$('mb_progressLabel2'); if (lbl2) lbl2.textContent = '0 / ' + _total;
             if (_total === 0) {
