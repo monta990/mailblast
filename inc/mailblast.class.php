@@ -439,7 +439,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
             'FROM'   => 'glpi_configs',
             'WHERE'  => [
                 'context' => self::CONFIG_CONTEXT,
-                ['name' => ['LIKE', 'queue_%']],
+                'name'    => ['LIKE', 'queue_%'],
             ],
         ]);
 
@@ -671,7 +671,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
             return null;
         }
 
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes)
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes)
               ?: ((string) ($row['mime'] ?? 'application/octet-stream'));
 
         return 'data:' . $mime . ';base64,' . base64_encode($bytes);
@@ -865,6 +865,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
 
 
         }
+
+        try { $transport->stop(); } catch (\Throwable $e) {}
 
         return ['sent' => $sent, 'errors' => $errors, 'total' => count($recipients)];
     }
