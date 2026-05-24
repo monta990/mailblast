@@ -10,6 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Pasted image data URIs** — `extractInlineImages()` now adds a second regex pass that converts `data:image/...;base64,...` src attributes into CID MIME parts, in addition to the existing `docid=X` pass. Gmail strips `data:` URIs from email HTML (broken image icon on desktop and mobile); Outlook mobile clips large HTML bodies that contain embedded base64 blobs. Both issues are resolved by converting pasted images to inline CID attachments before send.
 - **Outlook mobile images** — inline images now sent as CID MIME parts (`Content-ID`) instead of base64 data URIs. Outlook mobile (and many other clients) strip `data:` URIs regardless of image size; CID attachments render correctly.
 - **SMTP leak** — `sendMails()` now calls `$transport->stop()` after sending, matching the pattern already used in `processBatch()`.
 - **WHERE clause** — `cleanupStaleJobs()` LIKE condition was nested inside an anonymous array, causing it to be silently ignored; flattened to correct syntax.

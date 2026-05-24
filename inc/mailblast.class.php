@@ -627,6 +627,25 @@ class PluginMailblastMailblast extends PluginMailblastBase
             $html
         );
 
+        // Second pass: convert pasted data URI images (data:image/...;base64,...) to CID parts.
+        // Gmail strips data: URIs; Outlook mobile clips large HTML bodies containing them.
+        $dataPattern = '/(<img[^>]+src=["\'])(data:([a-zA-Z]+\/[a-zA-Z0-9+.\-]+);base64,([^"\']+))("[^>]*>|\'[^>]*>)/i';
+        $counter     = 0;
+        $html = (string) preg_replace_callback(
+            $dataPattern,
+            function (array $m) use (&$images, &$counter) {
+                $mime   = $m[3];
+                $bytes  = base64_decode($m[4], true);
+                if ($bytes === false || $bytes === '') {
+                    return $m[0];
+                }
+                $cid          = 'mailblast_data_img_' . $counter++;
+                $images[$cid] = ['cid' => $cid, 'data' => base64_encode($bytes), 'mime' => $mime];
+                return $m[1] . 'cid:' . $cid . $m[5];
+            },
+            $html
+        );
+
         return ['html' => $html, 'inlineImages' => array_values($images)];
     }
 
