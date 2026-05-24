@@ -95,7 +95,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
             'NOT'           => ['ue.email' => ''],
         ];
 
-        if ($type !== 'all' && empty($ids)) {
+        $validTypes = ['all', 'users', 'entities', 'profiles'];
+        if (!in_array($type, $validTypes, true) || ($type !== 'all' && empty($ids))) {
             return 0;
         }
 
@@ -414,12 +415,20 @@ class PluginMailblastMailblast extends PluginMailblastBase
         $filterType   = $storedFilter['type'] ?? 'all';
         $filterIds    = array_values(array_filter(array_map('intval', (array) ($storedFilter['ids'] ?? [])), fn($id) => $id >= 0));
 
+        $specificTypes = ['users', 'entities', 'profiles'];
+        if (in_array($filterType, $specificTypes, true) && empty($filterIds)) {
+            return ['sent' => 0, 'errors' => 0, 'done' => true, 'next_offset' => $offset, 'error_list' => [], 'sent_list' => []];
+        }
+        if (!in_array($filterType, array_merge(['all'], $specificTypes), true)) {
+            return ['sent' => 0, 'errors' => 0, 'done' => true, 'next_offset' => $offset, 'error_list' => [], 'sent_list' => []];
+        }
+
         $qWhere = ['ue.is_default' => 1, 'u.is_deleted' => 0, 'u.is_active' => 1, 'NOT' => ['ue.email' => '']];
         $qJoin  = ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]];
 
-        if ($filterType === 'users' && !empty($filterIds)) {
+        if ($filterType === 'users') {
             $qWhere['u.id'] = $filterIds;
-        } elseif (!empty($filterIds) && ($filterType === 'entities' || $filterType === 'profiles')) {
+        } elseif ($filterType === 'entities' || $filterType === 'profiles') {
             $qJoin['glpi_profiles_users AS pu'] = ['ON' => ['pu' => 'users_id', 'u' => 'id']];
             if ($filterType === 'entities') {
                 $qWhere[] = self::buildEntityWhere($filterIds);
