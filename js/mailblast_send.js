@@ -207,6 +207,73 @@
     let _totalSent = 0, _totalErrors = 0, _total = 0, _startTime = 0;
     let _reportRows = [];
 
+    // ── Recipient filter ─────────────────────────────────────────────────────
+
+    function getFilterParams() {
+      var typeEl = document.querySelector('input[name="filter_type"]:checked');
+      var type   = typeEl ? typeEl.value : 'all';
+      var ids    = [];
+      var selId  = { entities: 'mb_entitySelect', profiles: 'mb_profileSelect', users: 'mb_userSelect' }[type];
+      if (selId) {
+        var sel = document.getElementById(selId);
+        if (sel) ids = Array.from(sel.selectedOptions).map(function(o) { return +o.value; });
+      }
+      return { type: type, ids: ids };
+    }
+
+    function updateRecipientCount() {
+      var f = getFilterParams();
+      if (f.type !== 'all' && f.ids.length === 0) {
+        var badge = document.getElementById('mb_recipientCount');
+        if (badge) badge.textContent = '0';
+        var cc = document.getElementById('mb_confirmCount');
+        if (cc) cc.textContent = '0';
+        var sb = document.getElementById('mb_sendAll');
+        if (sb) sb.disabled = true;
+        var ri = document.getElementById('mb_recipientIcon');
+        var rw = document.getElementById('mb_recipientWarnIcon');
+        if (ri) ri.style.display = 'none';
+        if (rw) rw.style.display = '';
+        return;
+      }
+      var url = cfg.formAction
+        + '?action=count_recipients&filter_type=' + encodeURIComponent(f.type)
+        + '&filter_ids=' + encodeURIComponent(JSON.stringify(f.ids));
+      fetch(url, { method: 'GET' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.ok) return;
+          var n = data.count || 0;
+          var badge = document.getElementById('mb_recipientCount');
+          if (badge) badge.textContent = n;
+          var cc = document.getElementById('mb_confirmCount');
+          if (cc) cc.textContent = n;
+          var sb = document.getElementById('mb_sendAll');
+          if (sb) sb.disabled = (n === 0);
+          var ri = document.getElementById('mb_recipientIcon');
+          var rw = document.getElementById('mb_recipientWarnIcon');
+          if (ri) ri.style.display = n > 0 ? '' : 'none';
+          if (rw) rw.style.display = n > 0 ? 'none' : '';
+        }).catch(function() {});
+    }
+
+    (function wireFilter() {
+      var boxes = { entities: 'mb_filterEntitiesBox', profiles: 'mb_filterProfilesBox', users: 'mb_filterUsersBox' };
+      document.querySelectorAll('input[name="filter_type"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          Object.keys(boxes).forEach(function(k) {
+            var el = document.getElementById(boxes[k]);
+            if (el) el.style.display = (radio.value === k) ? '' : 'none';
+          });
+          updateRecipientCount();
+        });
+      });
+      ['mb_entitySelect', 'mb_profileSelect', 'mb_userSelect'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateRecipientCount);
+      });
+    }());
+
     function $$(id) { return document.getElementById(id); }
     function csrfToken() { var el = document.querySelector('input[name="_glpi_csrf_token"]'); return el ? el.value : ''; }
     function updateCsrf(token) {
@@ -511,6 +578,12 @@
           function(err) { finish(err); }
         );
       }
+
+      var _filter = getFilterParams();
+      fd.append('filter_type',    _filter.type);
+      fd.append('filter_ids',     JSON.stringify(_filter.ids));
+      var fromEntityEl = document.getElementById('mb_fromEntity');
+      fd.append('from_entity_id', fromEntityEl ? (fromEntityEl.value || '0') : '0');
 
       if (attB64Pending === 0) {
         _doQueueInit();

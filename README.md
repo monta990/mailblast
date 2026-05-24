@@ -5,7 +5,7 @@
 <h1 align="center">Mail Blast</h1>
 
 <p align="center">
-  <strong>GLPI plugin — Send bulk HTML emails to all registered users</strong>
+  <strong>GLPI plugin — Send bulk HTML emails to all registered users or filtered groups</strong>
 </p>
 
 <p align="center">
@@ -30,6 +30,8 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 
 | Feature | Details |
 |---|---|
+| **Recipient filtering** | Send to all users, specific organizations, specific profiles, or hand-picked individual users. Recipient count updates live as you change the selection. |
+| **Send from entity email** | Override the From address with an email configured on a specific GLPI organization (shown only when at least one entity has an email). |
 | **Rich-text body editor** | TinyMCE 7 (GLPI 11) — bold, italic, tables, images, lists, indentation, text alignment |
 | **Text alignment** | Left, center, right and justify buttons in the toolbar |
 | **Footer editor** | Native contenteditable editor with bold, italic and underline; line breaks preserved |
@@ -112,13 +114,30 @@ Result is shown inline without page reload.
 
 ### 4 — Mass mailing
 
-Click **Send to all users**. A confirmation dialog shows the recipient count. The plugin sends only to:
+#### Choose recipients
 
-- `is_active = 1`
-- `is_deleted = 0`
-- Non-empty `is_default = 1` email address in `glpi_useremails`
+Use the **Send to** selector to narrow who receives the email:
 
-A progress modal shows real-time status. You can cancel at any time using the Cancel button — emails already sent are not recalled.
+| Option | Behaviour |
+|---|---|
+| **All active users** | Every active user with a default email address (original behaviour, default). |
+| **Specific organizations** | Only users that belong to the selected organizations. Entity recursion is handled automatically — users assigned to a parent entity with *Recursive* enabled are included when any of their child entities is selected. Hold **Ctrl / Cmd** to select multiple. |
+| **Specific profiles** | Only users that have one of the selected profiles assigned. Hold **Ctrl / Cmd** to select multiple. |
+| **Specific users** | Only the individual users you pick from the list. Hold **Ctrl / Cmd** to select multiple. |
+
+The recipient count badge updates live via AJAX as you change the selection. The **Send** button is disabled automatically when the count is 0.
+
+#### Send from (optional)
+
+If at least one GLPI entity has an email address configured (*Administration → Entities → [entity] → Email*), a **Send from** dropdown appears. Select an entity to use its email address as the `From:` header for the send. Leaving it at *Default* uses GLPI's standard SMTP sender address.
+
+> **Note:** The SMTP server must allow sending from the chosen address. If your provider enforces sender authentication (SPF/DKIM), using an unverified domain will cause delivery failures.
+
+#### Confirmation and progress
+
+Click **Send to selected recipients**. A confirmation dialog shows the recipient count. The plugin sends only to active, non-deleted users with a default email address.
+
+A progress modal shows real-time status. You can cancel at any time — emails already sent are not recalled.
 
 ### 5 — Configuration
 

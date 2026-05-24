@@ -8,6 +8,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [1.7.4] — 2026-05-24
 
+### Added
+
+- **Recipient filtering** — the mass-send section now has a "Send to" selector: *All active users* (default, unchanged behaviour), *Specific organizations*, *Specific profiles*, or *Specific users*. Selecting a non-default type reveals a multi-select list; the recipient count badge updates live via AJAX as the selection changes. The filter is stored in the queue job record and applied server-side on every batch call — no changes to the batch-posting protocol.
+- **Send from entity email** — a "Send from" dropdown appears when at least one GLPI entity has an email address configured. Selecting an entity overrides the `From:` header for that send; the default (GLPI SMTP configuration) is preserved when none is selected.
+
 ### Fixed
 
 - **Pasted image data URIs** — `extractInlineImages()` now adds a second regex pass that converts `data:image/...;base64,...` src attributes into CID MIME parts, in addition to the existing `docid=X` pass. Gmail strips `data:` URIs from email HTML (broken image icon on desktop and mobile); Outlook mobile clips large HTML bodies that contain embedded base64 blobs. Both issues are resolved by converting pasted images to inline CID attachments before send.
