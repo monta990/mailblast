@@ -81,25 +81,94 @@ class PluginMailblastMailblast extends PluginMailblastBase
 
     // ─── User / email queries ─────────────────────────────────────────────
 
-    public static function countActiveUsersWithEmail(): int
+    public static function countActiveUsersWithEmail(array $filter = []): int
     {
         global $DB;
 
-        $result = $DB->request([
-            'COUNT'     => 'cpt',
-            'FROM'      => 'glpi_useremails AS ue',
-            'LEFT JOIN' => [
-                'glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']],
-            ],
-            'WHERE' => [
-                'ue.is_default' => 1,
-                'u.is_deleted'  => 0,
-                'u.is_active'   => 1,
-                'NOT'           => ['ue.email' => ''],
-            ],
-        ]);
+        $type = $filter['type'] ?? 'all';
+        $ids  = array_values(array_filter(array_map('intval', (array) ($filter['ids'] ?? [])), fn($id) => $id >= 0));
 
-        return (int) ($result->current()['cpt'] ?? 0);
+        $baseWhere = [
+            'ue.is_default' => 1,
+            'u.is_deleted'  => 0,
+            'u.is_active'   => 1,
+            'NOT'           => ['ue.email' => ''],
+        ];
+
+        if ($type !== 'all' && empty($ids)) {
+            return 0;
+        }
+
+        if ($type === 'all') {
+            $result = $DB->request([
+                'COUNT'     => 'cpt',
+                'FROM'      => 'glpi_useremails AS ue',
+                'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
+                'WHERE'     => $baseWhere,
+            ]);
+            return (int) ($result->current()['cpt'] ?? 0);
+        }
+
+        $query = [
+            'SELECT'    => ['u.id'],
+            'FROM'      => 'glpi_useremails AS ue',
+            'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
+            'WHERE'     => $baseWhere,
+        ];
+
+        if ($type === 'users') {
+            $query['WHERE']['u.id'] = $ids;
+        } elseif ($type === 'profiles') {
+            $query['LEFT JOIN']['glpi_profiles_users AS pu'] = ['ON' => ['pu' => 'users_id', 'u' => 'id']];
+            $query['WHERE']['pu.profiles_id'] = $ids;
+        } elseif ($type === 'entities') {
+            $query['LEFT JOIN']['glpi_profiles_users AS pu'] = ['ON' => ['pu' => 'users_id', 'u' => 'id']];
+            $query['WHERE'][] = self::buildEntityWhere($ids);
+        }
+
+        // Deduplicate in PHP — avoids GROUP BY quoting concerns and handles
+        // users with multiple profile assignments appearing more than once.
+        $seen = [];
+        foreach ($DB->request($query) as $row) {
+            $seen[(int) $row['id']] = true;
+        }
+        return count($seen);
+    }
+
+    /**
+     * Builds a WHERE sub-condition that correctly resolves GLPI entity membership,
+     * including recursive profile assignments from ancestor entities.
+     * Users are "in" entity X if:
+     *   (a) directly assigned to X or any of its descendants, OR
+     *   (b) assigned to an ancestor of X with is_recursive = 1.
+     */
+    private static function buildEntityWhere(array $entityIds): array
+    {
+        $directAndSons = [];
+        $ancestors     = [];
+        foreach ($entityIds as $id) {
+            foreach (array_keys(getSonsOf('glpi_entities', $id)) as $sonId) {
+                $directAndSons[] = $sonId;
+            }
+            foreach (array_keys(getAncestorsOf('glpi_entities', $id)) as $ancId) {
+                $ancestors[] = $ancId;
+            }
+        }
+        $directAndSons = array_values(array_unique($directAndSons));
+        $ancestors     = array_values(array_unique($ancestors));
+
+        $orParts = [];
+        if (!empty($directAndSons)) {
+            $orParts[] = ['pu.entities_id' => $directAndSons];
+        }
+        if (!empty($ancestors)) {
+            $orParts[] = ['pu.entities_id' => $ancestors, 'pu.is_recursive' => 1];
+        }
+
+        if (empty($orParts)) {
+            return ['pu.entities_id' => [-1]]; // match nothing
+        }
+        return count($orParts) === 1 ? $orParts[0] : ['OR' => $orParts];
     }
 
     // ─── Plugin configuration ────────────────────────────────────────────
@@ -167,6 +236,45 @@ class PluginMailblastMailblast extends PluginMailblastBase
 
 
 
+    // ─── UI data helpers ──────────────────────────────────────────────────
+
+    public static function getEntities(): array
+    {
+        global $DB;
+        $result = [];
+        foreach ($DB->request(['SELECT' => ['id', 'completename', 'email'], 'FROM' => 'glpi_entities', 'ORDER' => ['completename ASC']]) as $row) {
+            $result[] = ['id' => (int) $row['id'], 'name' => (string) $row['completename'], 'email' => (string) ($row['email'] ?? '')];
+        }
+        return $result;
+    }
+
+    public static function getProfiles(): array
+    {
+        global $DB;
+        $result = [];
+        foreach ($DB->request(['SELECT' => ['id', 'name'], 'FROM' => 'glpi_profiles', 'ORDER' => ['name ASC']]) as $row) {
+            $result[] = ['id' => (int) $row['id'], 'name' => (string) $row['name']];
+        }
+        return $result;
+    }
+
+    public static function getUsersWithEmail(): array
+    {
+        global $DB;
+        $result = [];
+        foreach ($DB->request([
+            'SELECT'    => ['u.id', 'u.name', 'u.firstname', 'u.realname', 'ue.email'],
+            'FROM'      => 'glpi_useremails AS ue',
+            'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
+            'WHERE'     => ['ue.is_default' => 1, 'u.is_deleted' => 0, 'u.is_active' => 1, 'NOT' => ['ue.email' => '']],
+            'ORDER'     => ['u.realname ASC', 'u.firstname ASC'],
+        ]) as $row) {
+            $name     = trim($row['firstname'] . ' ' . $row['realname']) ?: (string) $row['name'];
+            $result[] = ['id' => (int) $row['id'], 'name' => $name, 'email' => (string) $row['email']];
+        }
+        return $result;
+    }
+
     // ─── Queue management ─────────────────────────────────────────────────
     //
     // No custom DB table.  Recipients are fetched LIMIT/OFFSET at send time.
@@ -187,7 +295,9 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $subject,
         string $htmlBody,
         string $footer,
-        array  $attachments
+        array  $attachments,
+        array  $filter       = [],
+        int    $fromEntityId = 0
     ): array {
         // Use cryptographically secure random bytes for the job ID.
         $sendId = sprintf(
@@ -215,7 +325,25 @@ class PluginMailblastMailblast extends PluginMailblastBase
         $inlineResult = self::extractInlineImages($htmlBody);
         $htmlBody     = $inlineResult['html'];
         $fullHtml     = self::buildHtmlBody($htmlBody, $footer);
-        $total    = self::countActiveUsersWithEmail();
+
+        $safeFilter = (($filter['type'] ?? 'all') !== 'all') ? $filter : ['type' => 'all'];
+        $total      = self::countActiveUsersWithEmail($safeFilter);
+
+        // Resolve "send from" entity email if requested.
+        $fromEmail = '';
+        $fromName  = '';
+        if ($fromEntityId > 0) {
+            global $DB;
+            $iter = $DB->request(['SELECT' => ['completename', 'email'], 'FROM' => 'glpi_entities', 'WHERE' => ['id' => $fromEntityId]]);
+            if ($iter->count()) {
+                $row = $iter->current();
+                $candidate = trim((string) ($row['email'] ?? ''));
+                if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+                    $fromEmail = $candidate;
+                    $fromName  = (string) ($row['completename'] ?? '');
+                }
+            }
+        }
 
         // Purge stale jobs before registering the new one — prevents the new
         // job from being deleted if its created_at timestamp looks stale due to clock skew.
@@ -227,11 +355,14 @@ class PluginMailblastMailblast extends PluginMailblastBase
 
         Config::setConfigurationValues(self::CONFIG_CONTEXT, [
             'queue_' . $sendId => json_encode([
-                'subject'    => $subject,
-                'total'      => $total,
-                'created_at' => time(),
+                'subject'     => $subject,
+                'total'       => $total,
+                'created_at'  => time(),
                 'prev_sent'   => 0,
                 'prev_errors' => 0,
+                'filter'      => $safeFilter,
+                'from_email'  => $fromEmail,
+                'from_name'   => $fromName,
             ]),
         ]);
 
@@ -274,22 +405,37 @@ class PluginMailblastMailblast extends PluginMailblastBase
                     'done' => true, 'error_list' => [], 'sent_list' => []];
         }
 
-        $subject = $job['subject'] ?? '';
-        $total   = (int) ($job['total'] ?? 0);
+        $subject   = $job['subject'] ?? '';
+        $total     = (int) ($job['total'] ?? 0);
+        $fromEmail = (string) ($job['from_email'] ?? '');
+        $fromName  = (string) ($job['from_name']  ?? '');
+
+        $storedFilter = (array) ($job['filter'] ?? ['type' => 'all']);
+        $filterType   = $storedFilter['type'] ?? 'all';
+        $filterIds    = array_values(array_filter(array_map('intval', (array) ($storedFilter['ids'] ?? [])), fn($id) => $id >= 0));
+
+        $qWhere = ['ue.is_default' => 1, 'u.is_deleted' => 0, 'u.is_active' => 1, 'NOT' => ['ue.email' => '']];
+        $qJoin  = ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]];
+
+        if ($filterType === 'users' && !empty($filterIds)) {
+            $qWhere['u.id'] = $filterIds;
+        } elseif (!empty($filterIds) && ($filterType === 'entities' || $filterType === 'profiles')) {
+            $qJoin['glpi_profiles_users AS pu'] = ['ON' => ['pu' => 'users_id', 'u' => 'id']];
+            if ($filterType === 'entities') {
+                $qWhere[] = self::buildEntityWhere($filterIds);
+            } else {
+                $qWhere['pu.profiles_id'] = $filterIds;
+            }
+        }
 
         $iterator = $DB->request([
             'SELECT'    => ['ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
             'FROM'      => 'glpi_useremails AS ue',
-            'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
-            'WHERE'     => [
-                'ue.is_default' => 1,
-                'u.is_deleted'  => 0,
-                'u.is_active'   => 1,
-                'NOT'           => ['ue.email' => ''],
-            ],
-            'ORDER'  => ['u.id ASC'],
-            'LIMIT'  => $batchSize,
-            'START'  => $offset,
+            'LEFT JOIN' => $qJoin,
+            'WHERE'     => $qWhere,
+            'ORDER'     => ['u.id ASC'],
+            'LIMIT'     => $batchSize,
+            'START'     => $offset,
         ]);
 
         $errorList  = [];
@@ -378,7 +524,7 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 $subject
             );
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages
+                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages, $fromEmail, $fromName
             );
 
             if ($err === null) {
@@ -743,8 +889,10 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $subject,
         string $html,
         string $plain,
-        array  $attachments  = [],
-        array  $inlineImages = []
+        array  $attachments      = [],
+        array  $inlineImages     = [],
+        string $fromOverride     = '',
+        string $fromNameOverride = ''
     ): ?string {
         global $CFG_GLPI;
 
@@ -756,6 +904,11 @@ class PluginMailblastMailblast extends PluginMailblastBase
             $fromName = trim((string) ($CFG_GLPI['admin_email_name'] ?? ''));
             if ($fromAddr !== '' && filter_var($fromAddr, FILTER_VALIDATE_EMAIL)) {
                 $email->from(new \Symfony\Component\Mime\Address($fromAddr, $fromName));
+            }
+
+            // Override From with entity email if configured
+            if ($fromOverride !== '' && filter_var($fromOverride, FILTER_VALIDATE_EMAIL)) {
+                $email->from(new \Symfony\Component\Mime\Address($fromOverride, $fromNameOverride ?: $fromOverride));
             }
 
             // Envelope sender (smtp_sender), if configured

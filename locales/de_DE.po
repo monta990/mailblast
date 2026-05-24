@@ -355,3 +355,45 @@ msgstr "Bitte %d Sekunden warten, bevor Sie erneut senden."
 
 msgid "server time"
 msgstr "Serverzeit"
+
+msgid "Send to"
+msgstr "Senden an"
+
+msgid "All active users"
+msgstr "Alle aktiven Benutzer"
+
+msgid "Specific organizations"
+msgstr "Bestimmte Organisationen"
+
+msgid "Specific profiles"
+msgstr "Bestimmte Profile"
+
+msgid "Specific users"
+msgstr "Bestimmte Benutzer"
+
+msgid "Select organizations"
+msgstr "Organisationen auswählen"
+
+msgid "Select profiles"
+msgstr "Profile auswählen"
+
+msgid "Select users"
+msgstr "Benutzer auswählen"
+
+msgid "Hold Ctrl / Cmd to select multiple."
+msgstr "Strg / Cmd gedrückt halten für Mehrfachauswahl."
+
+msgid "Send from"
+msgstr "Senden von"
+
+msgid "Default (GLPI configuration)"
+msgstr "Standard (GLPI-Konfiguration)"
+
+msgid "Confirm send"
+msgstr "Versand bestätigen"
+
+msgid "Send to selected recipients"
+msgstr "An ausgewählte Empfänger senden"
+
+msgid "Select at least one item to send to specific recipients."
+msgstr "Wählen Sie mindestens ein Element aus, um an bestimmte Empfänger zu senden."

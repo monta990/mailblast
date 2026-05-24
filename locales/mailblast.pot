@@ -357,3 +357,45 @@ msgstr ""
 
 msgid "server time"
 msgstr ""
+
+msgid "Send to"
+msgstr ""
+
+msgid "All active users"
+msgstr ""
+
+msgid "Specific organizations"
+msgstr ""
+
+msgid "Specific profiles"
+msgstr ""
+
+msgid "Specific users"
+msgstr ""
+
+msgid "Select organizations"
+msgstr ""
+
+msgid "Select profiles"
+msgstr ""
+
+msgid "Select users"
+msgstr ""
+
+msgid "Hold Ctrl / Cmd to select multiple."
+msgstr ""
+
+msgid "Send from"
+msgstr ""
+
+msgid "Default (GLPI configuration)"
+msgstr ""
+
+msgid "Confirm send"
+msgstr ""
+
+msgid "Send to selected recipients"
+msgstr ""
+
+msgid "Select at least one item to send to specific recipients."
+msgstr ""

@@ -24,6 +24,17 @@ function mb_clean_buffers(): void {
 
 // â”€â”€â”€ Handle POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+// count_recipients is GET — read-only, no CSRF token needed, safe from rotation races.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'count_recipients') {
+    $filterType = preg_replace('/[^a-z_]/', '', (string) ($_GET['filter_type'] ?? 'all'));
+    $filterIds  = json_decode((string) ($_GET['filter_ids'] ?? '[]'), true) ?? [];
+    $count      = PluginMailblastMailblast::countActiveUsersWithEmail(['type' => $filterType, 'ids' => $filterIds]);
+    mb_clean_buffers();
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true, 'count' => $count]);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // CSRF is validated automatically by GLPI (csrf_compliant hook in setup.php)
@@ -167,7 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts);
+        $filterType   = preg_replace('/[^a-z_]/', '', (string) ($_POST['filter_type']   ?? 'all'));
+        $filterIds    = json_decode((string) ($_POST['filter_ids']    ?? '[]'), true) ?? [];
+        $fromEntityId = max(0, (int) ($_POST['from_entity_id'] ?? 0));
+        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts, ['type' => $filterType, 'ids' => $filterIds], $fromEntityId);
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 
@@ -423,6 +437,10 @@ $mb_body_id    = 'mb_body_' . $mb_body_rand;
 
 $docTypes      = PluginMailblastMailblast::getAllowedDocumentTypes();
 $userCount     = PluginMailblastMailblast::countActiveUsersWithEmail();
+$entities      = PluginMailblastMailblast::getEntities();
+$profiles      = PluginMailblastMailblast::getProfiles();
+$users         = PluginMailblastMailblast::getUsersWithEmail();
+$entitiesWithEmail = array_values(array_filter($entities, fn($e) => $e['email'] !== ''));
 $myEmail       = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
 $savedForm     = PluginMailblastMailblast::loadFormConfig();
 $cfgBatchDelay = PluginMailblastMailblast::getBatchDelayMs();
@@ -495,6 +513,7 @@ echo Html::scriptBlock('window.mbConfig = ' . json_encode([
         'sendingEmails'   => __('Sending emails', 'mailblast'),
         'noActiveUsers'   => __('No active users with registered email found', 'mailblast'),
         'sending'         => __('Sending…', 'mailblast'),
+        'selectFilter'    => __('Select at least one item to send to specific recipients.', 'mailblast'),
         'testSent'        => __('Test sent successfully', 'mailblast'),
         'testFailed'      => __('Test failed', 'mailblast'),
     ],
@@ -587,9 +606,13 @@ $(function() {
     'mb_body_id'     => $mb_body_id,
     'editor_html'    => $editorHtml,
     'footer_html'    => $footerHtml,
-    'can_config'     => Session::haveRight('config', UPDATE),
-    'plugin_web_dir' => $pluginWebDir,
-    'csrf_token'     => Session::getNewCSRFToken(),
+    'can_config'          => Session::haveRight('config', UPDATE),
+    'plugin_web_dir'      => $pluginWebDir,
+    'csrf_token'          => Session::getNewCSRFToken(),
+    'entities'            => $entities,
+    'entities_with_email' => $entitiesWithEmail,
+    'profiles'            => $profiles,
+    'users'               => $users,
 ]);
 
 // Inline JS — avoids GLPI 11 static-file routing issues for plugin subdirectories
