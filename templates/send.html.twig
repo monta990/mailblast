@@ -189,7 +189,8 @@
         </h4>
 
         <div class="mb-3">
-          <label class="form-label fw-bold">{{ __('Send to', 'mailblast') }}</label>
+          <fieldset class="mb-0 p-0 border-0">
+          <legend class="form-label fw-bold mb-1">{{ __('Send to', 'mailblast') }}</legend>
           <div class="d-flex flex-column gap-1">
             <div class="form-check">
               <input class="form-check-input" type="radio" name="filter_type" id="mb_filterAll" value="all" checked>
@@ -208,6 +209,7 @@
               <label class="form-check-label" for="mb_filterUsersRadio">{{ __('Specific users', 'mailblast') }}</label>
             </div>
           </div>
+          </fieldset>
         </div>
 
         <div id="mb_filterEntitiesBox" class="mb-3" style="display:none;max-width:520px">
