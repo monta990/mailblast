@@ -32,6 +32,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 |---|---|
 | **Recipient filtering** | Send to all users, specific organizations, specific profiles, or hand-picked individual users. Recipient count updates live as you change the selection. |
 | **Send from entity email** | Override the From address with an email configured on a specific GLPI organization (shown only when at least one entity has an email). |
+| **Reply to selector** | Pick any active GLPI user with a registered email address to receive replies. When selected, it is also used as the `From:` address for that send, taking priority over "Send from". |
 | **Rich-text body editor** | TinyMCE 7 (GLPI 11) — bold, italic, tables, images, lists, indentation, text alignment |
 | **Text alignment** | Left, center, right and justify buttons in the toolbar |
 | **Footer editor** | Native contenteditable editor with bold, italic and underline; line breaks preserved |
@@ -132,6 +133,12 @@ The recipient count badge updates live via AJAX as you change the selection. The
 If at least one GLPI entity has an email address configured (*Administration → Entities → [entity] → Email*), a **Send from** dropdown appears. Select an entity to use its email address as the `From:` header for the send. Leaving it at *Default* uses GLPI's standard SMTP sender address.
 
 > **Note:** The SMTP server must allow sending from the chosen address. If your provider enforces sender authentication (SPF/DKIM), using an unverified domain will cause delivery failures.
+
+#### Reply to (optional)
+
+A **Reply to** dropdown lists every active GLPI user with a registered email address. Selecting a user sets the `Reply-To:` header, so replies from recipients are delivered to that mailbox instead of the sending administrator's own address.
+
+Selecting a **Reply to** user also overrides the `From:` header with that same mailbox, taking priority over the **Send from** entity selection above — this way recipients see the same address in `From:` and `Reply-To:`, and replies always land where expected. Leaving it at *Default* keeps the **Send from** / GLPI SMTP sender behaviour completely unchanged. Applies to both the mass send and the test send.
 
 #### Confirmation and progress
 

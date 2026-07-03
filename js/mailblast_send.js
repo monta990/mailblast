@@ -584,6 +584,8 @@
       fd.append('filter_ids',     JSON.stringify(_filter.ids));
       var fromEntityEl = document.getElementById('mb_fromEntity');
       fd.append('from_entity_id', fromEntityEl ? (fromEntityEl.value || '0') : '0');
+      var replyToEl = document.getElementById('mb_replyToUser');
+      fd.append('reply_to_user_id', replyToEl ? (replyToEl.value || '0') : '0');
 
       if (attB64Pending === 0) {
         _doQueueInit();
@@ -758,6 +760,9 @@
           fd.append('test_mode', modeEl ? modeEl.value : 'my_address');
           var specEl = document.getElementById('mb_testEmail');
           if (specEl && specEl.value.trim()) fd.append('test_email', specEl.value.trim());
+
+          var replyToEl = document.getElementById('mb_replyToUser');
+          fd.append('reply_to_user_id', replyToEl ? (replyToEl.value || '0') : '0');
 
           fetch(cfg.formAction, { method: 'POST', body: fd })
             .then(function(r) { return r.json(); })

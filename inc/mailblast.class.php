@@ -276,6 +276,41 @@ class PluginMailblastMailblast extends PluginMailblastBase
         return $result;
     }
 
+    /**
+     * Resolves a GLPI user's default email address and display name, for use
+     * as the campaign's Reply-To. Returns empty strings when the user id is
+     * 0, unknown, or has no valid default email registered.
+     *
+     * @return array{email: string, name: string}
+     */
+    public static function resolveUserEmail(int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['email' => '', 'name' => ''];
+        }
+
+        global $DB;
+        $iter = $DB->request([
+            'SELECT'    => ['ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
+            'FROM'      => 'glpi_useremails AS ue',
+            'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
+            'WHERE'     => ['ue.is_default' => 1, 'ue.users_id' => $userId],
+        ]);
+
+        if (!$iter->count()) {
+            return ['email' => '', 'name' => ''];
+        }
+
+        $row   = $iter->current();
+        $email = trim((string) ($row['email'] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['email' => '', 'name' => ''];
+        }
+
+        $name = trim((string) ($row['firstname'] . ' ' . $row['realname'])) ?: (string) ($row['login'] ?? '');
+        return ['email' => $email, 'name' => $name];
+    }
+
     // ─── Queue management ─────────────────────────────────────────────────
     //
     // No custom DB table.  Recipients are fetched LIMIT/OFFSET at send time.
@@ -297,8 +332,9 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $htmlBody,
         string $footer,
         array  $attachments,
-        array  $filter       = [],
-        int    $fromEntityId = 0
+        array  $filter        = [],
+        int    $fromEntityId  = 0,
+        int    $replyToUserId = 0
     ): array {
         // Use cryptographically secure random bytes for the job ID.
         $sendId = sprintf(
@@ -346,6 +382,20 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
         }
 
+        // Resolve "reply to" user email if requested — replies land here
+        // regardless of what From address the recipient sees.
+        $replyTo = self::resolveUserEmail($replyToUserId);
+
+        // When a "Reply to" user is explicitly selected, that same mailbox is
+        // used for From: as well, taking priority over the entity "Send from"
+        // selection. If no reply-to user is selected, the existing sender
+        // logic (entity override, falling back to GLPI's admin_email) applies
+        // unchanged.
+        if ($replyTo['email'] !== '') {
+            $fromEmail = $replyTo['email'];
+            $fromName  = $replyTo['name'];
+        }
+
         // Purge stale jobs before registering the new one — prevents the new
         // job from being deleted if its created_at timestamp looks stale due to clock skew.
         static $cleanupDone = false;
@@ -362,8 +412,10 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 'prev_sent'   => 0,
                 'prev_errors' => 0,
                 'filter'      => $safeFilter,
-                'from_email'  => $fromEmail,
-                'from_name'   => $fromName,
+                'from_email'     => $fromEmail,
+                'from_name'      => $fromName,
+                'reply_to_email' => $replyTo['email'],
+                'reply_to_name'  => $replyTo['name'],
             ]),
         ]);
 
@@ -406,10 +458,12 @@ class PluginMailblastMailblast extends PluginMailblastBase
                     'done' => true, 'error_list' => [], 'sent_list' => []];
         }
 
-        $subject   = $job['subject'] ?? '';
-        $total     = (int) ($job['total'] ?? 0);
-        $fromEmail = (string) ($job['from_email'] ?? '');
-        $fromName  = (string) ($job['from_name']  ?? '');
+        $subject      = $job['subject'] ?? '';
+        $total        = (int) ($job['total'] ?? 0);
+        $fromEmail    = (string) ($job['from_email']     ?? '');
+        $fromName     = (string) ($job['from_name']      ?? '');
+        $replyToEmail = (string) ($job['reply_to_email'] ?? '');
+        $replyToName  = (string) ($job['reply_to_name']  ?? '');
 
         $storedFilter = (array) ($job['filter'] ?? ['type' => 'all']);
         $filterType   = $storedFilter['type'] ?? 'all';
@@ -538,7 +592,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 $subject
             );
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages, $fromEmail, $fromName
+                $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages,
+                $fromEmail, $fromName, $replyToEmail, $replyToName
             );
 
             if ($err === null) {
@@ -906,7 +961,9 @@ class PluginMailblastMailblast extends PluginMailblastBase
         array  $attachments      = [],
         array  $inlineImages     = [],
         string $fromOverride     = '',
-        string $fromNameOverride = ''
+        string $fromNameOverride = '',
+        string $replyToEmail     = '',
+        string $replyToName      = ''
     ): ?string {
         global $CFG_GLPI;
 
@@ -929,6 +986,12 @@ class PluginMailblastMailblast extends PluginMailblastBase
             $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
             if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
                 $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
+            }
+
+            // Reply-To override — when set, replies from the recipient land in
+            // this mailbox regardless of which address appears in From:.
+            if ($replyToEmail !== '' && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+                $email->replyTo(new \Symfony\Component\Mime\Address($replyToEmail, $replyToName ?: $replyToEmail));
             }
 
             $email->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
@@ -1036,9 +1099,10 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $subject,
         string $htmlBody,
         string $footer,
-        array  $attachments = [],
-        bool   $testMode    = false,
-        string $testEmail   = ''
+        array  $attachments   = [],
+        bool   $testMode      = false,
+        string $testEmail     = '',
+        int    $replyToUserId = 0
     ): array {
         $inlineResult = self::extractInlineImages($htmlBody);
         $htmlBody     = $inlineResult['html'];
@@ -1060,6 +1124,13 @@ class PluginMailblastMailblast extends PluginMailblastBase
         // sendMails is only called for test sends — single recipient always.
         $recipients = [['email' => $testEmail, 'name' => $testEmail]];
 
+        $replyTo = self::resolveUserEmail($replyToUserId);
+
+        // Same priority rule as the mass-send queue: when a "Reply to" user
+        // is selected, it is used for From: as well.
+        $fromOverride     = $replyTo['email'];
+        $fromNameOverride = $replyTo['name'];
+
         $sent   = 0;
         $errors = [];
 
@@ -1076,7 +1147,8 @@ class PluginMailblastMailblast extends PluginMailblastBase
             }
 
             $err = self::sendSymfonyEmail(
-                $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths, $inlineImages
+                $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths, $inlineImages,
+                $fromOverride, $fromNameOverride, $replyTo['email'], $replyTo['name']
             );
 
             if ($err === null) {

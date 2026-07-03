@@ -188,73 +188,104 @@
           {{ __('Mass mailing', 'mailblast') }}
         </h4>
 
-        <div class="mb-3">
-          <fieldset class="mb-0 p-0 border-0">
-          <legend class="form-label fw-bold mb-1">{{ __('Send to', 'mailblast') }}</legend>
-          <div class="d-flex flex-column gap-1">
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="filter_type" id="mb_filterAll" value="all" checked>
-              <label class="form-check-label" for="mb_filterAll">{{ __('All active users', 'mailblast') }}</label>
+        <div class="row g-4">
+          <div class="col-12 col-md-6">
+
+            <div class="mb-3">
+              <fieldset class="mb-0 p-0 border-0">
+              <legend class="form-label fw-bold mb-1">{{ __('Send to', 'mailblast') }}</legend>
+              <div class="d-flex flex-column gap-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="filter_type" id="mb_filterAll" value="all" checked>
+                  <label class="form-check-label" for="mb_filterAll">{{ __('All active users', 'mailblast') }}</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="filter_type" id="mb_filterEntitiesRadio" value="entities">
+                  <label class="form-check-label" for="mb_filterEntitiesRadio">{{ __('Specific organizations', 'mailblast') }}</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="filter_type" id="mb_filterProfilesRadio" value="profiles">
+                  <label class="form-check-label" for="mb_filterProfilesRadio">{{ __('Specific profiles', 'mailblast') }}</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="filter_type" id="mb_filterUsersRadio" value="users">
+                  <label class="form-check-label" for="mb_filterUsersRadio">{{ __('Specific users', 'mailblast') }}</label>
+                </div>
+              </div>
+              </fieldset>
             </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="filter_type" id="mb_filterEntitiesRadio" value="entities">
-              <label class="form-check-label" for="mb_filterEntitiesRadio">{{ __('Specific organizations', 'mailblast') }}</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="filter_type" id="mb_filterProfilesRadio" value="profiles">
-              <label class="form-check-label" for="mb_filterProfilesRadio">{{ __('Specific profiles', 'mailblast') }}</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="filter_type" id="mb_filterUsersRadio" value="users">
-              <label class="form-check-label" for="mb_filterUsersRadio">{{ __('Specific users', 'mailblast') }}</label>
-            </div>
+
           </div>
-          </fieldset>
+
+          <div class="col-12 col-md-6">
+
+            <div id="mb_filterEntitiesBox" class="mb-3" style="display:none">
+              <label class="form-label" for="mb_entitySelect">{{ __('Select organizations', 'mailblast') }}</label>
+              <select id="mb_entitySelect" multiple class="form-select" size="5" style="max-height:180px">
+                {% for e in entities %}
+                  <option value="{{ e.id }}">{{ e.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
+            </div>
+
+            <div id="mb_filterProfilesBox" class="mb-3" style="display:none">
+              <label class="form-label" for="mb_profileSelect">{{ __('Select profiles', 'mailblast') }}</label>
+              <select id="mb_profileSelect" multiple class="form-select" size="5" style="max-height:180px">
+                {% for p in profiles %}
+                  <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
+            </div>
+
+            <div id="mb_filterUsersBox" class="mb-3" style="display:none">
+              <label class="form-label" for="mb_userSelect">{{ __('Select users', 'mailblast') }}</label>
+              <select id="mb_userSelect" multiple class="form-select" size="6" style="max-height:200px">
+                {% for u in users %}
+                  <option value="{{ u.id }}">{{ u.name }} &lt;{{ u.email }}&gt;</option>
+                {% endfor %}
+              </select>
+              <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
+            </div>
+
+          </div>
         </div>
 
-        <div id="mb_filterEntitiesBox" class="mb-3" style="display:none;max-width:520px">
-          <label class="form-label" for="mb_entitySelect">{{ __('Select organizations', 'mailblast') }}</label>
-          <select id="mb_entitySelect" multiple class="form-select" size="5" style="max-height:180px">
-            {% for e in entities %}
-              <option value="{{ e.id }}">{{ e.name }}</option>
-            {% endfor %}
-          </select>
-          <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
-        </div>
+        {% if entities_with_email is not empty or users is not empty %}
+        <div class="row g-4 mt-1">
+          <div class="col-12 col-md-6">
+            {% if entities_with_email is not empty %}
+            <div class="mb-3">
+              <label class="form-label fw-bold" for="mb_fromEntity">{{ __('Send from', 'mailblast') }}</label>
+              <select id="mb_fromEntity" class="form-select">
+                <option value="0">{{ __('Default (GLPI configuration)', 'mailblast') }}</option>
+                {% for e in entities_with_email %}
+                  <option value="{{ e.id }}">{{ e.name }} ({{ e.email }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+          </div>
 
-        <div id="mb_filterProfilesBox" class="mb-3" style="display:none;max-width:520px">
-          <label class="form-label" for="mb_profileSelect">{{ __('Select profiles', 'mailblast') }}</label>
-          <select id="mb_profileSelect" multiple class="form-select" size="5" style="max-height:180px">
-            {% for p in profiles %}
-              <option value="{{ p.id }}">{{ p.name }}</option>
-            {% endfor %}
-          </select>
-          <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
-        </div>
-
-        <div id="mb_filterUsersBox" class="mb-3" style="display:none;max-width:520px">
-          <label class="form-label" for="mb_userSelect">{{ __('Select users', 'mailblast') }}</label>
-          <select id="mb_userSelect" multiple class="form-select" size="6" style="max-height:200px">
-            {% for u in users %}
-              <option value="{{ u.id }}">{{ u.name }} &lt;{{ u.email }}&gt;</option>
-            {% endfor %}
-          </select>
-          <div class="form-text text-muted">{{ __('Hold Ctrl / Cmd to select multiple.', 'mailblast') }}</div>
-        </div>
-
-        {% if entities_with_email is not empty %}
-        <div class="mb-3" style="max-width:480px">
-          <label class="form-label fw-bold" for="mb_fromEntity">{{ __('Send from', 'mailblast') }}</label>
-          <select id="mb_fromEntity" class="form-select">
-            <option value="0">{{ __('Default (GLPI configuration)', 'mailblast') }}</option>
-            {% for e in entities_with_email %}
-              <option value="{{ e.id }}">{{ e.name }} ({{ e.email }})</option>
-            {% endfor %}
-          </select>
+          <div class="col-12 col-md-6">
+            {% if users is not empty %}
+            <div class="mb-3">
+              <label class="form-label fw-bold" for="mb_replyToUser">{{ __('Reply to', 'mailblast') }}</label>
+              <select id="mb_replyToUser" class="form-select">
+                <option value="0">{{ __('Default (no override)', 'mailblast') }}</option>
+                {% for u in users %}
+                  <option value="{{ u.id }}">{{ u.name }} ({{ u.email }})</option>
+                {% endfor %}
+              </select>
+              <div class="form-text text-muted">{{ __('Replies from recipients will be delivered to this mailbox instead of the send address.', 'mailblast') }}</div>
+            </div>
+            {% endif %}
+          </div>
         </div>
         {% endif %}
 
-        <p class="mb-3 d-flex align-items-center gap-2">
+        <p class="mb-3 mt-3 d-flex align-items-center gap-2">
           <i class="ti ti-circle-check text-success fs-4" id="mb_recipientIcon"{% if user_count == 0 %} style="display:none"{% endif %}></i>
           <i class="ti ti-alert-triangle text-warning fs-4" id="mb_recipientWarnIcon"{% if user_count > 0 %} style="display:none"{% endif %}></i>
           <span>

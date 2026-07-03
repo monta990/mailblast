@@ -5,7 +5,7 @@
  * @author  Edwin Elias Alvarez
  * @license GPL-3.0-or-later
  */
-define('PLUGIN_MAILBLAST_VERSION',  '1.7.4');
+define('PLUGIN_MAILBLAST_VERSION',  '1.7.5');
 define('PLUGIN_MAILBLAST_MIN_GLPI', '11.0.0');
 define('PLUGIN_MAILBLAST_MAX_GLPI', '12.99.99');
 

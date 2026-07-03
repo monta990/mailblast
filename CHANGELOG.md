@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.5] — 2026-07-02
+
+### Added
+
+- **Reply to selector** — a new "Reply to" dropdown appears below "Send from", listing every active GLPI user with a registered email address. Selecting a user sets the `Reply-To:` header so recipient replies land in that mailbox. Applies to both mass sends and test sends.
+
+### Changed
+
+- **Send from priority** — when a "Reply to" user is selected, that same mailbox is now also used for the `From:` header, taking priority over the "Send from" entity selection. Recipients then see the same address in both `From:` and `Reply-To:`, and replies always land in the selected mailbox. The previous "Send from" entity / default admin-email logic is unchanged whenever no "Reply to" user is selected.
+
+---
+
 ## [1.7.4] — 2026-05-24
 
 ### Added

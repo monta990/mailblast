@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rawFooter = strip_tags($rawFooter, ['b', 'i', 'u', 'strong', 'em', 'br']);
     $footer    = trim((string) preg_replace('/<(b|i|u|strong|em|br)(\s[^>]*)>/i', '<$1>', $rawFooter));
     $action  = (string) ($_POST['action'] ?? '');
+    $replyToUserId = max(0, (int) ($_POST['reply_to_user_id'] ?? 0));
 
     // â”€â”€ AJAX actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Handled first, always exit with JSON, never reach Html::back().
@@ -121,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $allErrors   = [];
         foreach ($testEmails as $testEmail) {
             $result = PluginMailblastMailblast::sendMails(
-                $subject, $body, $footer, $tmpAtts, true, $testEmail
+                $subject, $body, $footer, $tmpAtts, true, $testEmail, $replyToUserId
             );
             $totalSent += $result['sent'];
             $allErrors  = array_merge($allErrors, $result['errors']);
@@ -181,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $filterType   = preg_replace('/[^a-z_]/', '', (string) ($_POST['filter_type']   ?? 'all'));
         $filterIds    = json_decode((string) ($_POST['filter_ids']    ?? '[]'), true) ?? [];
         $fromEntityId = max(0, (int) ($_POST['from_entity_id'] ?? 0));
-        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts, ['type' => $filterType, 'ids' => $filterIds], $fromEntityId);
+        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts, ['type' => $filterType, 'ids' => $filterIds], $fromEntityId, $replyToUserId);
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 

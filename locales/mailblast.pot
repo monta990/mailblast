@@ -391,6 +391,15 @@ msgstr ""
 msgid "Default (GLPI configuration)"
 msgstr ""
 
+msgid "Reply to"
+msgstr ""
+
+msgid "Default (no override)"
+msgstr ""
+
+msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
+msgstr ""
+
 msgid "Confirm send"
 msgstr ""
 

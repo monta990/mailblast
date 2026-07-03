@@ -389,6 +389,15 @@ msgstr "Enviar desde"
 msgid "Default (GLPI configuration)"
 msgstr "Predeterminado (configuración de GLPI)"
 
+msgid "Reply to"
+msgstr "Responder a"
+
+msgid "Default (no override)"
+msgstr "Predeterminado (sin anulación)"
+
+msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
+msgstr "Las respuestas de los destinatarios llegarán a este buzón en lugar de la dirección de envío."
+
 msgid "Confirm send"
 msgstr "Confirmar envío"
 
