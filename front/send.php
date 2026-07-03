@@ -1,6 +1,6 @@
 ﻿<?php
 /**
- * Mail Blast â€” front/send.php
+ * Mail Blast - front/send.php
  * Main compose & send page.
  */
 
@@ -9,7 +9,7 @@
 // and the page render calls ob_end_flush() implicitly at script end.
 ob_start();
 
-// GLPI 11 always bootstraps via Symfony â€” GLPI_ROOT is defined before this file runs.
+// GLPI 11 always bootstraps via Symfony - GLPI_ROOT is defined before this file runs.
 include_once GLPI_ROOT . '/inc/includes.php';
 
 Session::checkRight('config', UPDATE);
@@ -22,7 +22,7 @@ function mb_clean_buffers(): void {
     }
 }
 
-// â”€â”€â”€ Handle POST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- Handle POST --
 
 // count_recipients is GET — read-only, no CSRF token needed, safe from rotation races.
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'count_recipients') {
@@ -40,14 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CSRF is validated automatically by GLPI (csrf_compliant hook in setup.php)
 
     $subject = trim(strip_tags($_POST['subject'] ?? ''));
-    $body    = (string) ($_POST['body']   ?? '');  // HTML from TinyMCE â€” do NOT strip_tags
+    $body    = (string) ($_POST['body']   ?? '');  // HTML from TinyMCE - do NOT strip_tags
     $rawFooter = (string) ($_POST['footer'] ?? '');
     $rawFooter = strip_tags($rawFooter, ['b', 'i', 'u', 'strong', 'em', 'br']);
     $footer    = trim((string) preg_replace('/<(b|i|u|strong|em|br)(\s[^>]*)>/i', '<$1>', $rawFooter));
     $action  = (string) ($_POST['action'] ?? '');
     $replyToUserId = max(0, (int) ($_POST['reply_to_user_id'] ?? 0));
 
-    // â”€â”€ AJAX actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- AJAX actions --
     // Handled first, always exit with JSON, never reach Html::back().
 
     if ($action === 'test_send') {
@@ -145,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'queue_init') {
         PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
-        // Cooldown check â€” prevents accidental duplicate sends from concurrent tabs.
+        // Cooldown check - prevents accidental duplicate sends from concurrent tabs.
         $cooldownErr = PluginMailblastMailblast::checkCooldown();
         if ($cooldownErr !== null) {
             mb_clean_buffers();
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Body size guard â€” the body HTML is re-posted on every batch call.
+        // Body size guard - the body HTML is re-posted on every batch call.
         $maxBodyBytes = PluginMailblastMailblast::getMaxAttachmentMb() * 1024 * 1024;
         if (strlen($body) > $maxBodyBytes) {
             mb_clean_buffers();
@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Decode base64 attachments from JS RAM into per-request temp files.
         // Attachments travel as base64 JSON (same pattern as test_send),
-        // never via $_FILES â€” avoids browser issues with DataTransfer file inputs.
+        // never via $_FILES - avoids browser issues with DataTransfer file inputs.
         $attRaw  = (string) ($_POST['attachments_b64'] ?? '');
         $attB64  = $attRaw !== '' ? (json_decode($attRaw, true) ?? []) : [];
         $tmpAtts = [];
@@ -181,8 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $filterType   = preg_replace('/[^a-z_]/', '', (string) ($_POST['filter_type']   ?? 'all'));
         $filterIds    = json_decode((string) ($_POST['filter_ids']    ?? '[]'), true) ?? [];
-        $fromEntityId = max(0, (int) ($_POST['from_entity_id'] ?? 0));
-        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts, ['type' => $filterType, 'ids' => $filterIds], $fromEntityId, $replyToUserId);
+        $init = PluginMailblastMailblast::initQueue($subject, $body, $footer, $tmpAtts, ['type' => $filterType, 'ids' => $filterIds], $replyToUserId);
 
         foreach ($tmpAtts as $t) { @unlink($t['tmp']); }
 
@@ -311,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // â”€â”€ Standard form submit (action = 'test' or 'send_all') â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // -- Standard form submit (action = 'test' or 'send_all') --
 
     PluginMailblastMailblast::saveFormConfig($subject, $body, $footer);
 
@@ -431,7 +430,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// â”€â”€â”€ GET: render form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- GET: render form --
 
 $mb_body_rand  = uniqid();
 $mb_body_id    = 'mb_body_' . $mb_body_rand;
@@ -441,7 +440,6 @@ $userCount     = PluginMailblastMailblast::countActiveUsersWithEmail();
 $entities      = PluginMailblastMailblast::getEntities();
 $profiles      = PluginMailblastMailblast::getProfiles();
 $users         = PluginMailblastMailblast::getUsersWithEmail();
-$entitiesWithEmail = array_values(array_filter($entities, fn($e) => $e['email'] !== ''));
 $myEmail       = UserEmail::getDefaultForUser((int) $_SESSION['glpiID']);
 $savedForm     = PluginMailblastMailblast::loadFormConfig();
 $cfgBatchDelay = PluginMailblastMailblast::getBatchDelayMs();
@@ -473,7 +471,7 @@ $footerHtml = ($footerRaw !== ''
     ? nl2br($footerRaw)
     : $footerRaw;
 
-// Attachment accept hint â€” extensions only, max 20
+// Attachment accept hint - extensions only, max 20
 $extHints    = array_values(array_filter(
     explode(',', $docTypes['accept'] ?? ''),
     static fn(string $s): bool => str_starts_with(trim($s), '.')
@@ -517,6 +515,8 @@ echo Html::scriptBlock('window.mbConfig = ' . json_encode([
         'selectFilter'    => __('Select at least one item to send to specific recipients.', 'mailblast'),
         'testSent'        => __('Test sent successfully', 'mailblast'),
         'testFailed'      => __('Test failed', 'mailblast'),
+        'senderPreviewReply'   => __('This send will use %s as both the From and Reply-To address.', 'mailblast'),
+        'senderPreviewDefault' => __('This send will use the default GLPI configuration for both From and replies.', 'mailblast'),
     ],
 ]) . ';
 window._mbMaxAttMb = ' . (int) $cfgMaxAttMb . ';');
@@ -611,7 +611,6 @@ $(function() {
     'plugin_web_dir'      => $pluginWebDir,
     'csrf_token'          => Session::getNewCSRFToken(),
     'entities'            => $entities,
-    'entities_with_email' => $entitiesWithEmail,
     'profiles'            => $profiles,
     'users'               => $users,
 ]);

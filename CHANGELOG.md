@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.6] — 2026-07-03
+
+### Added
+
+- **Sender preview indicator** — a small dynamic hint below "Reply to" states in real time whether `From:`/`Reply-To:` will use the selected mailbox or GLPI's default notification configuration.
+- **Layout fix** — "Send from" and "Reply to" are now rendered in their own row, independent from the recipient-selector box above them, so they stay aligned with each other regardless of how tall that box is (e.g. "Select users" with a long list).
+- **Update check** — the configuration page now checks GitHub releases (`monta990/mailblast`) for a newer version, caching the result for 24h to avoid slowing page loads or hitting rate limits. Shows a warning alert with a link to the release when an update is available; otherwise a plain reminder alert links to the releases page. Uses cURL with a 3s timeout, fails silently (falls back to the plain reminder) if the request can't complete.
+- **"Send from" note relocated** — the note pointing to GLPI's *Email notification settings* (which controls the actual From address) moved from the compose page to the **Sending** card on the configuration page, next to the settings it actually documents. Link is built from `$CFG_GLPI['url_base']` (portable across installs) and opens in a new tab.
+
+### Changed
+
+- **Recent sends card order** — the "Recent sends" history card on the configuration page now appears before the Save / Back buttons instead of after the closing `</form>`, fixing a layout inconsistency where it visually trailed the page actions.
+
+### Removed
+
+- **"Send from" entity override** — removed the entity-email dropdown from the compose page entirely. It only offered value when a GLPI entity had an email configured, rarely the case, and its override was undermined by SMTP relays that force `Sender:`/envelope-from to the authenticated account regardless. "Reply to" is unaffected and still overrides `From:` when selected.
+
+### Fixed
+
+- **`resolveUserEmail()` consistency** — the Reply-To/From resolver now filters on `is_deleted = 0` and `is_active = 1`, matching `getUsersWithEmail()`. Previously a crafted `reply_to_user_id` referencing an inactive or deleted user would still resolve to that user's email; it is now silently ignored, falling back to default behaviour, exactly like an unknown id.
+- **Outlook "on behalf of" banner** — when a From override was active, the plugin still applied GLPI's global `smtp_sender` as an explicit `Sender:` header, differing from the overridden `From:` and triggering "sender@domain on behalf of override@domain" in Outlook. The `Sender:` header (and its matching envelope-from) is now only applied when no From override is in effect.
+
+---
+
 ## [1.7.5] — 2026-07-02
 
 ### Added

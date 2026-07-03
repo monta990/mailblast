@@ -31,8 +31,8 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | Feature | Details |
 |---|---|
 | **Recipient filtering** | Send to all users, specific organizations, specific profiles, or hand-picked individual users. Recipient count updates live as you change the selection. |
-| **Send from entity email** | Override the From address with an email configured on a specific GLPI organization (shown only when at least one entity has an email). |
-| **Reply to selector** | Pick any active GLPI user with a registered email address to receive replies. When selected, it is also used as the `From:` address for that send, taking priority over "Send from". |
+| **Send from** | Uses the address configured in GLPI's *Email notification settings* (linked from the config page); no per-send override. |
+| **Reply to selector** | Pick any active GLPI user with a registered email address. When selected, it is used as both the `From:` and `Reply-To:` address for that send. |
 | **Rich-text body editor** | TinyMCE 7 (GLPI 11) — bold, italic, tables, images, lists, indentation, text alignment |
 | **Text alignment** | Left, center, right and justify buttons in the toolbar |
 | **Footer editor** | Native contenteditable editor with bold, italic and underline; line breaks preserved |
@@ -52,6 +52,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | **Duplicate recipient guard** | Within-batch deduplication skips users sharing an email address so no recipient receives the same message twice |
 | **Send history** | Last 10 mass sends stored and displayed on the configuration page (date, subject, sent count, failed count) with server-timezone timestamps |
 | **Full i18n** | Base language: `en` (without dedicated `.po/.mo`); translations: `es_MX`, `fr_FR`, `de_DE` |
+| **Update check** | Configuration page checks GitHub releases (cached 24h) and shows an alert linking to the latest release when a newer version is available |
 
 ---
 
@@ -128,17 +129,15 @@ Use the **Send to** selector to narrow who receives the email:
 
 The recipient count badge updates live via AJAX as you change the selection. The **Send** button is disabled automatically when the count is 0.
 
-#### Send from (optional)
+#### Send from
 
-If at least one GLPI entity has an email address configured (*Administration → Entities → [entity] → Email*), a **Send from** dropdown appears. Select an entity to use its email address as the `From:` header for the send. Leaving it at *Default* uses GLPI's standard SMTP sender address.
-
-> **Note:** The SMTP server must allow sending from the chosen address. If your provider enforces sender authentication (SPF/DKIM), using an unverified domain will cause delivery failures.
+The From address always follows GLPI's own *Setup → Notifications* (`front/notificationmailingsetting.form.php`) configuration. There is no per-send override on this page; a link to that settings screen is shown on the plugin's **configuration page** instead.
 
 #### Reply to (optional)
 
-A **Reply to** dropdown lists every active GLPI user with a registered email address. Selecting a user sets the `Reply-To:` header, so replies from recipients are delivered to that mailbox instead of the sending administrator's own address.
+A **Reply to** dropdown lists every active GLPI user with a registered email address. Selecting a user sets the `Reply-To:` header, so replies from recipients are delivered to that mailbox instead of the default notification address — and it is also used as the `From:` header for that send, so recipients see the same address in `From:` and `Reply-To:`. Leaving it at *Default* keeps GLPI's notification configuration completely unchanged. Applies to both the mass send and the test send.
 
-Selecting a **Reply to** user also overrides the `From:` header with that same mailbox, taking priority over the **Send from** entity selection above — this way recipients see the same address in `From:` and `Reply-To:`, and replies always land where expected. Leaving it at *Default* keeps the **Send from** / GLPI SMTP sender behaviour completely unchanged. Applies to both the mass send and the test send.
+> **Note:** Some SMTP relays force the envelope sender / `Sender:` header to match the authenticated SMTP account regardless of the `From:` override, which can make mail clients show "sent on behalf of". Check with your SMTP provider if this is a concern.
 
 #### Confirmation and progress
 

@@ -61,6 +61,8 @@ $maxAttachment = PluginMailblastMailblast::getMaxAttachmentMb();
 Html::header(__('Mail Blast — Configuration', 'mailblast'), '', 'config', 'PluginMailblastMailblast');
 
 $history = PluginMailblastMailblast::getHistory();
+$notificationSetupUrl = rtrim((string) ($CFG_GLPI['url_base'] ?? ''), '/') . '/front/notificationmailingsetting.form.php';
+$versionCheck = PluginMailblastMailblast::checkLatestVersion();
 
 \Glpi\Application\View\TemplateRenderer::getInstance()->display('@mailblast/config.html.twig', [
     'saved'         => $saved,
@@ -74,6 +76,8 @@ $history = PluginMailblastMailblast::getHistory();
     'send_url'      => plugin_mailblast_web_dir() . '/front/send.php',
     'csrf_token'    => Session::getNewCSRFToken(),
     'save_label'    => _sx('button', 'Save'),
+    'notification_setup_url' => $notificationSetupUrl,
+    'version_check' => $versionCheck,
 ]);
 
 Html::footer();

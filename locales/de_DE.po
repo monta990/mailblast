@@ -386,6 +386,27 @@ msgstr "Strg / Cmd gedrückt halten für Mehrfachauswahl."
 msgid "Send from"
 msgstr "Senden von"
 
+msgid "A new version is available"
+msgstr "Eine neue Version ist verfügbar"
+
+msgid "current"
+msgstr "aktuell"
+
+msgid "View releases"
+msgstr "Versionen ansehen"
+
+msgid "Always keep this plugin up to date"
+msgstr "Halten Sie dieses Plugin stets aktuell"
+
+msgid "check the latest version"
+msgstr "aktuelle Version ansehen"
+
+msgid "Uses the address configured in"
+msgstr "Verwendet die Adresse aus"
+
+msgid "Email notification settings"
+msgstr "E-Mail-Benachrichtigungseinstellungen"
+
 msgid "Default (GLPI configuration)"
 msgstr "Standard (GLPI-Konfiguration)"
 
@@ -397,6 +418,15 @@ msgstr "Standard (keine Überschreibung)"
 
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
 msgstr "Antworten der Empfänger werden an dieses Postfach zugestellt statt an die Absendeadresse."
+
+msgid "This send will use %s as both the From and Reply-To address."
+msgstr "Dieser Versand verwendet %s sowohl als Absender- (From) als auch als Antwortadresse (Reply-To)."
+
+msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
+msgstr "Dieser Versand verwendet %s als Absenderadresse (From). Antworten verwenden die GLPI-Standardkonfiguration."
+
+msgid "This send will use the default GLPI configuration for both From and replies."
+msgstr "Dieser Versand verwendet für Absender und Antworten die GLPI-Standardkonfiguration."
 
 msgid "Confirm send"
 msgstr "Versand bestätigen"

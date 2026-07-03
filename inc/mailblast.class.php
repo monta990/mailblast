@@ -279,7 +279,9 @@ class PluginMailblastMailblast extends PluginMailblastBase
     /**
      * Resolves a GLPI user's default email address and display name, for use
      * as the campaign's Reply-To. Returns empty strings when the user id is
-     * 0, unknown, or has no valid default email registered.
+     * 0, unknown, deleted, inactive, or has no valid default email
+     * registered — mirrors the same active/not-deleted filters used by
+     * getUsersWithEmail() so a stale or tampered id cannot resolve.
      *
      * @return array{email: string, name: string}
      */
@@ -294,7 +296,12 @@ class PluginMailblastMailblast extends PluginMailblastBase
             'SELECT'    => ['ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
             'FROM'      => 'glpi_useremails AS ue',
             'LEFT JOIN' => ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]],
-            'WHERE'     => ['ue.is_default' => 1, 'ue.users_id' => $userId],
+            'WHERE'     => [
+                'ue.is_default' => 1,
+                'ue.users_id'   => $userId,
+                'u.is_deleted'  => 0,
+                'u.is_active'   => 1,
+            ],
         ]);
 
         if (!$iter->count()) {
@@ -333,7 +340,6 @@ class PluginMailblastMailblast extends PluginMailblastBase
         string $footer,
         array  $attachments,
         array  $filter        = [],
-        int    $fromEntityId  = 0,
         int    $replyToUserId = 0
     ): array {
         // Use cryptographically secure random bytes for the job ID.
@@ -366,35 +372,14 @@ class PluginMailblastMailblast extends PluginMailblastBase
         $safeFilter = (($filter['type'] ?? 'all') !== 'all') ? $filter : ['type' => 'all'];
         $total      = self::countActiveUsersWithEmail($safeFilter);
 
-        // Resolve "send from" entity email if requested.
-        $fromEmail = '';
-        $fromName  = '';
-        if ($fromEntityId > 0) {
-            global $DB;
-            $iter = $DB->request(['SELECT' => ['completename', 'email'], 'FROM' => 'glpi_entities', 'WHERE' => ['id' => $fromEntityId]]);
-            if ($iter->count()) {
-                $row = $iter->current();
-                $candidate = trim((string) ($row['email'] ?? ''));
-                if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
-                    $fromEmail = $candidate;
-                    $fromName  = (string) ($row['completename'] ?? '');
-                }
-            }
-        }
-
         // Resolve "reply to" user email if requested — replies land here
-        // regardless of what From address the recipient sees.
-        $replyTo = self::resolveUserEmail($replyToUserId);
-
-        // When a "Reply to" user is explicitly selected, that same mailbox is
-        // used for From: as well, taking priority over the entity "Send from"
-        // selection. If no reply-to user is selected, the existing sender
-        // logic (entity override, falling back to GLPI's admin_email) applies
-        // unchanged.
-        if ($replyTo['email'] !== '') {
-            $fromEmail = $replyTo['email'];
-            $fromName  = $replyTo['name'];
-        }
+        // regardless of what From address the recipient sees. When a "Reply
+        // to" user is selected, that same mailbox is used for From: as well.
+        // If no reply-to user is selected, GLPI's default notification
+        // sender configuration (Setup > Notifications) is used unchanged.
+        $replyTo   = self::resolveUserEmail($replyToUserId);
+        $fromEmail = $replyTo['email'];
+        $fromName  = $replyTo['name'];
 
         // Purge stale jobs before registering the new one — prevents the new
         // job from being deleted if its created_at timestamp looks stale due to clock skew.
@@ -725,6 +710,63 @@ class PluginMailblastMailblast extends PluginMailblastBase
         return is_array($list) ? $list : [];
     }
 
+    // ─── Update check ────────────────────────────────────────────────────
+
+    /**
+     * Checks GitHub releases for a newer version, caching the result for 24h
+     * to avoid slowing down page loads or hitting API rate limits. Falls
+     * back silently (update_available = false) if the request fails — the
+     * config page then just shows a generic "check for updates" reminder.
+     */
+    public static function checkLatestVersion(): array
+    {
+        $cfg       = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['version_check_at', 'version_check_latest']);
+        $checkedAt = (int) ($cfg['version_check_at'] ?? 0);
+        $latest    = (string) ($cfg['version_check_latest'] ?? '');
+
+        if ((time() - $checkedAt) > 86400) {
+            $fetched = self::fetchLatestGithubTag();
+            Config::setConfigurationValues(self::CONFIG_CONTEXT, [
+                'version_check_at'     => time(),
+                'version_check_latest' => $fetched !== '' ? $fetched : $latest,
+            ]);
+            if ($fetched !== '') {
+                $latest = $fetched;
+            }
+        }
+
+        return [
+            'current'           => PLUGIN_MAILBLAST_VERSION,
+            'latest'            => $latest,
+            'update_available'  => $latest !== '' && version_compare($latest, PLUGIN_MAILBLAST_VERSION, '>'),
+            'releases_url'      => 'https://github.com/monta990/mailblast/releases',
+        ];
+    }
+
+    private static function fetchLatestGithubTag(): string
+    {
+        if (!function_exists('curl_init')) {
+            return '';
+        }
+        $ch = curl_init('https://api.github.com/repos/monta990/mailblast/releases/latest');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 3,
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_HTTPHEADER     => ['User-Agent: mailblast-glpi-plugin', 'Accept: application/vnd.github+json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($body === false || $code !== 200) {
+            return '';
+        }
+        $data = json_decode((string) $body, true);
+        return ltrim((string) ($data['tag_name'] ?? ''), 'vV');
+    }
+
     // ─── Cooldown protection ─────────────────────────────────────────────
 
     /**
@@ -977,15 +1019,24 @@ class PluginMailblastMailblast extends PluginMailblastBase
                 $email->from(new \Symfony\Component\Mime\Address($fromAddr, $fromName));
             }
 
-            // Override From with entity email if configured
+            // Override From when a "Reply to" user was selected — the same
+            // mailbox is used for both, so replies land where recipients
+            // expect. Empty when no Reply to user is selected.
             if ($fromOverride !== '' && filter_var($fromOverride, FILTER_VALIDATE_EMAIL)) {
                 $email->from(new \Symfony\Component\Mime\Address($fromOverride, $fromNameOverride ?: $fromOverride));
             }
 
-            // Envelope sender (smtp_sender), if configured
-            $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
-            if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
-                $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
+            // Envelope sender (smtp_sender), if configured — only applied when
+            // no From override is active. Setting an explicit Sender: header
+            // that differs from From: makes Outlook (and other clients) show
+            // "sender@x.com on behalf of override@x.com", which defeats the
+            // purpose of the From override. When From is overridden, the
+            // envelope sender simply follows the From address instead.
+            if ($fromOverride === '') {
+                $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
+                if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
+                    $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
+                }
             }
 
             // Reply-To override — when set, replies from the recipient land in

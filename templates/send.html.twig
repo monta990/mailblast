@@ -252,36 +252,20 @@
           </div>
         </div>
 
-        {% if entities_with_email is not empty or users is not empty %}
-        <div class="row g-4 mt-1">
-          <div class="col-12 col-md-6">
-            {% if entities_with_email is not empty %}
-            <div class="mb-3">
-              <label class="form-label fw-bold" for="mb_fromEntity">{{ __('Send from', 'mailblast') }}</label>
-              <select id="mb_fromEntity" class="form-select">
-                <option value="0">{{ __('Default (GLPI configuration)', 'mailblast') }}</option>
-                {% for e in entities_with_email %}
-                  <option value="{{ e.id }}">{{ e.name }} ({{ e.email }})</option>
-                {% endfor %}
-              </select>
-            </div>
-            {% endif %}
-          </div>
-
-          <div class="col-12 col-md-6">
-            {% if users is not empty %}
-            <div class="mb-3">
-              <label class="form-label fw-bold" for="mb_replyToUser">{{ __('Reply to', 'mailblast') }}</label>
-              <select id="mb_replyToUser" class="form-select">
-                <option value="0">{{ __('Default (no override)', 'mailblast') }}</option>
-                {% for u in users %}
-                  <option value="{{ u.id }}">{{ u.name }} ({{ u.email }})</option>
-                {% endfor %}
-              </select>
-              <div class="form-text text-muted">{{ __('Replies from recipients will be delivered to this mailbox instead of the send address.', 'mailblast') }}</div>
-            </div>
-            {% endif %}
-          </div>
+        {% if users is not empty %}
+        <div class="mb-3" style="max-width:480px">
+          <label class="form-label fw-bold" for="mb_replyToUser">{{ __('Reply to', 'mailblast') }}</label>
+          <select id="mb_replyToUser" class="form-select">
+            <option value="0">{{ __('Default (no override)', 'mailblast') }}</option>
+            {% for u in users %}
+              <option value="{{ u.id }}" data-email="{{ u.email }}">{{ u.name }} ({{ u.email }})</option>
+            {% endfor %}
+          </select>
+          <div class="form-text text-muted">{{ __('Replies from recipients will be delivered to this mailbox instead of the send address.', 'mailblast') }}</div>
+        </div>
+        <div id="mb_senderPreview" class="mb-3 small text-muted d-flex align-items-center gap-1" style="display:none">
+          <i class="ti ti-info-circle"></i>
+          <span id="mb_senderPreviewText"></span>
         </div>
         {% endif %}
 

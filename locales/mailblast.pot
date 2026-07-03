@@ -388,6 +388,27 @@ msgstr ""
 msgid "Send from"
 msgstr ""
 
+msgid "A new version is available"
+msgstr ""
+
+msgid "current"
+msgstr ""
+
+msgid "View releases"
+msgstr ""
+
+msgid "Always keep this plugin up to date"
+msgstr ""
+
+msgid "check the latest version"
+msgstr ""
+
+msgid "Uses the address configured in"
+msgstr ""
+
+msgid "Email notification settings"
+msgstr ""
+
 msgid "Default (GLPI configuration)"
 msgstr ""
 
@@ -398,6 +419,15 @@ msgid "Default (no override)"
 msgstr ""
 
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
+msgstr ""
+
+msgid "This send will use %s as both the From and Reply-To address."
+msgstr ""
+
+msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
+msgstr ""
+
+msgid "This send will use the default GLPI configuration for both From and replies."
 msgstr ""
 
 msgid "Confirm send"

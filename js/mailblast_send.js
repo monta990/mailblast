@@ -282,6 +282,39 @@
       if (el) el.value = token;
     }
 
+    // ── Sender preview (Reply-To override indicator) ────────────────────────
+
+    function updateSenderPreview() {
+      var box  = $$('mb_senderPreview');
+      var text = $$('mb_senderPreviewText');
+      if (!box || !text) return;
+
+      var replyEl = $$('mb_replyToUser');
+
+      var replyEmail = '';
+      if (replyEl && replyEl.value !== '0') {
+        var replyOpt = replyEl.options[replyEl.selectedIndex];
+        replyEmail = replyOpt ? (replyOpt.getAttribute('data-email') || '') : '';
+      }
+
+      var msg;
+      if (replyEmail) {
+        msg = (i18n.senderPreviewReply || 'This send will use %s as both the From and Reply-To address.').replace('%s', replyEmail);
+      } else {
+        msg = i18n.senderPreviewDefault || 'This send will use the default GLPI configuration for both From and replies.';
+      }
+
+      text.textContent = msg;
+      box.style.display = '';
+    }
+
+    (function wireSenderPreview() {
+      var replyEl = $$('mb_replyToUser');
+      if (!replyEl) return;
+      replyEl.addEventListener('change', updateSenderPreview);
+      updateSenderPreview();
+    }());
+
     function showFormAlert(msg) {
       var el = $$('mb_formAlert');
       if (!el) return;
@@ -582,8 +615,6 @@
       var _filter = getFilterParams();
       fd.append('filter_type',    _filter.type);
       fd.append('filter_ids',     JSON.stringify(_filter.ids));
-      var fromEntityEl = document.getElementById('mb_fromEntity');
-      fd.append('from_entity_id', fromEntityEl ? (fromEntityEl.value || '0') : '0');
       var replyToEl = document.getElementById('mb_replyToUser');
       fd.append('reply_to_user_id', replyToEl ? (replyToEl.value || '0') : '0');
 
