@@ -1,0 +1,196 @@
+{% extends "layout/page_skeleton.html.twig" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+
+  <div class="d-flex align-items-center mb-4 gap-2">
+    <i class="ti ti-settings fs-3 text-primary"></i>
+    <h2 class="mb-0">{{ __('Mail Blast — Configuration', 'mailblast') }}</h2>
+    <span class="ms-auto badge bg-primary-lt text-primary fs-6">
+      <i class="ti ti-users me-1"></i>
+      {{ user_count }}
+      {{ __('active recipients', 'mailblast') }}
+    </span>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-bold d-flex align-items-center gap-2">
+      <i class="ti ti-brand-github"></i>{{ __('Version', 'mailblast') }}
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="text-muted">{{ __('Installed', 'mailblast') }}:</span>
+        <span class="badge bg-secondary-lt text-secondary">{{ version_check.current }}</span>
+        {% if version_check.check_available %}
+          <span class="text-muted">{{ __('Latest stable', 'mailblast') }}:</span>
+          <span class="badge {{ version_check.update_available ? 'bg-warning-lt text-warning' : 'bg-success-lt text-success' }}">{{ version_check.latest }}</span>
+        {% else %}
+          <span class="badge bg-secondary-lt text-secondary">{{ __('Unavailable', 'mailblast') }}</span>
+        {% endif %}
+      </div>
+
+      {% if version_check.update_available %}
+        <div class="alert alert-warning py-2 mb-2 d-flex align-items-center gap-2" role="alert">
+          <i class="ti ti-download"></i>
+          <span>
+            {{ __('A new version is available', 'mailblast') }}: <strong>{{ version_check.latest }}</strong>.
+          </span>
+        </div>
+      {% elseif version_check.check_available %}
+        <div class="alert alert-success py-2 mb-2 d-flex align-items-center gap-2" role="status">
+          <i class="ti ti-circle-check"></i>
+          <span>{{ __('You are using the latest stable version.', 'mailblast') }}</span>
+        </div>
+      {% else %}
+        <div class="alert alert-secondary py-2 mb-2 d-flex align-items-center gap-2" role="status">
+          <i class="ti ti-cloud-off"></i>
+          <span>{{ __('GitHub version check is currently unavailable. The plugin will retry automatically later.', 'mailblast') }}</span>
+        </div>
+      {% endif %}
+
+      <a href="{{ version_check.releases_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer">
+        <i class="ti ti-brand-github me-1"></i>{{ __('View releases', 'mailblast') }}
+      </a>
+    </div>
+  </div>
+
+  {% if saved %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="ti ti-check me-1"></i>
+      {{ __('Settings saved successfully.', 'mailblast') }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endif %}
+
+  {% for err in errors %}
+    <div class="alert alert-danger" role="alert">
+      <i class="ti ti-alert-circle me-1"></i>{{ err }}
+    </div>
+  {% endfor %}
+
+  <form method="POST" action="{{ config_url }}">
+    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token }}">
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold">
+        <i class="ti ti-send me-1"></i>{{ __('Sending', 'mailblast') }}
+      </div>
+      <div class="card-body">
+
+        <div class="mb-3">
+          <span class="form-label fw-semibold d-block">{{ __('Send from', 'mailblast') }}</span>
+          <div class="small text-muted d-flex align-items-center gap-1">
+            <i class="ti ti-info-circle"></i>
+            <span>
+              {{ __('Uses the address configured in Configuration → Notifications → Email.', 'mailblast') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="mb_cfg_batch_size">
+            {{ __('Batch size', 'mailblast') }}
+          </label>
+          <input type="number" id="mb_cfg_batch_size" name="batch_size"
+                 class="form-control" style="max-width:160px"
+                 min="1" max="100" value="{{ batch_size }}">
+          <div class="form-text text-muted">
+            {{ __('Number of emails sent per batch (1–100). Default: 15. Lower values reduce SMTP load; higher values speed up sending.', 'mailblast') }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="mb_cfg_delay">
+            {{ __('Delay between batches (ms)', 'mailblast') }}
+          </label>
+          <input type="number" id="mb_cfg_delay" name="batch_delay_ms"
+                 class="form-control" style="max-width:160px"
+                 min="0" max="5000" value="{{ batch_delay }}">
+          <div class="form-text text-muted">
+            {{ __('Milliseconds to wait between batches (0–5000). Default: 120. Increase this if your SMTP server enforces rate limits.', 'mailblast') }}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold">
+        <i class="ti ti-paperclip me-1"></i>{{ __('Attachments', 'mailblast') }}
+      </div>
+      <div class="card-body">
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="mb_cfg_max_att">
+            {{ __('Maximum total attachment size (MB)', 'mailblast') }}
+          </label>
+          <input type="number" id="mb_cfg_max_att" name="max_attachment_mb"
+                 class="form-control" style="max-width:160px"
+                 min="1" max="100" value="{{ max_attachment }}">
+          <div class="form-text text-muted">
+            {{ __('Maximum combined size of all attached files (1–100 MB). Default: 15 MB. Files exceeding this limit will be rejected in the browser before upload.', 'mailblast') }}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold">
+        <i class="ti ti-history me-1"></i>{{ __('Recent sends', 'mailblast') }}
+        <span class="text-muted fw-normal small ms-2">{{ __('Last 10 mass sends', 'mailblast') }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if history is empty %}
+          <p class="text-muted p-3 mb-0">
+            <i class="ti ti-info-circle me-1"></i>
+            {{ __('No sends recorded yet. History is populated after each mass mailing.', 'mailblast') }}
+          </p>
+        {% else %}
+          <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>
+                    {{ __('Date', 'mailblast') }}
+                    <small class="text-muted fw-normal ms-1" title="{{ __('server time', 'mailblast') }}">
+                      ({{ timezone }})
+                    </small>
+                  </th>
+                  <th>{{ __('Subject', 'mailblast') }}</th>
+                  <th class="text-success text-end">{{ __('Sent', 'mailblast') }}</th>
+                  <th class="text-danger text-end">{{ __('Failed', 'mailblast') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in history %}
+                <tr>
+                  <td class="text-muted small">{{ h.date }}</td>
+                  <td>{{ h.subject }}</td>
+                  <td class="text-success fw-bold text-end">{{ h.sent }}</td>
+                  <td class="text-end {{ h.errors > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                    {{ h.errors }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="ti ti-device-floppy me-1"></i>{{ save_label }}
+      </button>
+      <a href="{{ send_url }}" class="btn btn-secondary">
+        <i class="ti ti-arrow-left me-1"></i>{{ __('Back to Mail Blast', 'mailblast') }}
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock content %}

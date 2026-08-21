@@ -1,8 +1,79 @@
 # Changelog — Mail Blast
 
 All notable changes to this project are documented in this file.
-Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Versioning follows [Semantic Versioning](https://semver.org/).
+Format based on Keep a Changelog.
+Versioning follows Semantic Versioning.
+
+---
+
+## [1.8.0] — 2026-08-20
+
+This release consolidates the complete 1.8.x development cycle (1.8.0 through 1.8.14) into the final 1.8.0 release.
+
+### Modernization
+- Migrated Mail Blast to a modern PSR-4 architecture for GLPI 11 and GLPI 12.
+- HTTP endpoints use Symfony Controllers and named plugin routes.
+- Separated configuration, recipients, content, attachments, mail delivery, queue processing and report logic into dedicated services.
+- Removed legacy `front/`, `ajax/` and `inc/` plugin entry points and compatibility facades.
+- Added a self-contained PSR-4 autoloader without Composer or an external package manager.
+- Restored and retained the native GLPI page shell, navigation, theme and responsive styling.
+- Fixed plugin-relative routing and configuration targets for both regular `plugins/` and Marketplace installations.
+
+### Sending
+- Uses GLPI's native SMTP configuration and mailer transport.
+- Supports HTML/rich-text message formatting.
+- Supports inline images, attachments, and inline images combined with attachments.
+- Validates attachment MIME types against the types permitted by GLPI on the server.
+- Enforces the configured combined attachment/inline-image size limit.
+- Added test delivery to the administrator address or a specific address.
+- Supports sending to specific users, organizations, profiles and all active users with registered email addresses.
+- Uses the address configured in GLPI Setup → Notifications → Email for the sender.
+- Supports a selected Reply-To mailbox.
+
+### Queue and reliability
+- Preserved the browser-worker queue architecture with minimal queue metadata stored in `glpi_configs`.
+- Fixed queue initialization and batch processing so valid campaigns are not rejected after the browser/PHP round trip.
+- Canonicalized campaign data before integrity hashing and validates the campaign payload between queue initialization and subsequent worker batches.
+- Keeps message HTML, plain text, attachments and inline images out of `glpi_configs`; request-local temporary files are cleaned after processing.
+- Fixed expired or missing queue jobs and zero-delivery batches being reported incorrectly as successful.
+- Fixed the progress dialog so queue/server failures show the real error instead of a generic success or server error.
+- Added server-side logging for queue validation, SMTP initialization, recipient delivery failures and unexpected action exceptions.
+- Fixed SMTP class resolution to use GLPI's global `\GLPIMailer`.
+- Fixed organization recipient filtering and service visibility issues.
+- Fixed TinyMCE initialization from emitting output before GLPI response headers.
+
+### Reports
+- Added XLSX report generation using the PhpSpreadsheet version supplied by GLPI.
+- Updated report generation for current PhpSpreadsheet APIs, replacing the removed `setCellValueByColumnAndRow()` method.
+- Report failures now return structured JSON so the browser does not try to parse an HTML 500 response as JSON.
+- Localized report statuses and export information.
+
+### Configuration and UI
+- Modernized Send and Configuration screens with Twig and native GLPI components.
+- Added configurable batch size, inter-batch delay and maximum combined attachment size.
+- Added recent-send history with sent and failed counts.
+- Restored the native GLPI page skeleton for Controllers.
+- Improved badge contrast for light and dark GLPI themes.
+- Configuration now explicitly states: “Utiliza la dirección configurada en Configuración → Notificaciones → Correo electrónico.”
+
+### GitHub version checker
+- Added a hardened GitHub stable-release version detector.
+- Checks published, non-draft and non-prerelease releases and validates release tags before comparing versions.
+- Uses a six-hour cache under the GLPI plugin data directory.
+- Uses TLS verification, short connection/total timeouts and a bounded response size.
+- Keeps stale known-good data when GitHub is temporarily unavailable without affecting plugin operation.
+- Shows installed version, latest stable version, update availability and a direct GitHub Releases link.
+
+### Compatibility and security
+- Validated with GLPI 11 and GLPI 12.
+- Requires GLPI 11.0 through 12.x and PHP 8.2 or newer.
+- Maintains CSRF protection and GLPI access checks for protected operations.
+- Uses Twig escaping for user-controlled output.
+- No Composer metadata, bundled vendor tree or external runtime dependency is included.
+
+### Localization
+- Maintains Spanish (Mexico), French and German translations.
+- Added translations for version checking, report statuses and configuration messaging.
 
 ---
 
@@ -79,8 +150,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Plugin web directory** — replaced deprecated `Plugin::getWebDir()` with a new `plugin_mailblast_web_dir()`. The helper derives the correct web path from `__DIR__` relative to `GLPI_ROOT`, so it works whether the plugin is installed in `plugins/` or `marketplace/`. `Plugin::getWebDir()` is removed in GLPI 12.
-- **Not-found guard** — replaced removed `Html::displayNotFoundError()` with `throw new \Glpi\Exception\Http\NotFoundHttpException()` in `front/config.php`. The exception class is available in both GLPI 11 and 12.
+- **Modern plugin routing** — plugin URLs are generated from GLPI named routes and no longer depend on `Plugin::getWebDir()` or plugin filesystem paths.
+- **Controller errors** — HTTP errors are handled directly by modern Symfony controllers; no legacy front controller remains.
 - **GLPI version range** — `PLUGIN_MAILBLAST_MAX_GLPI` raised from `11.99.99` to `12.99.99`; plugin now officially supports GLPI 11 and 12.
 
 ---
@@ -320,3 +391,8 @@ Works for full sends, partial sends, and cancellations.
 ### Added
 
 - Initial release — GLPI 11.0+ only.
+
+## 1.8.13
+
+- Localized XLSX report status values (`sent`, `failed`, `pending`) for all supported plugin languages.
+- Kept the internal status codes unchanged while translating only their user-facing report representation.

@@ -22,7 +22,7 @@
 
 **Mail Blast** lets any GLPI administrator compose and send a bulk HTML email to every active user that has a default email address registered — directly from GLPI's interface, using its native SMTP configuration.
 
-No external services. No cron jobs. No extra dependencies beyond GLPI itself.
+No external services or extra runtime dependencies beyond GLPI itself.
 
 ---
 
@@ -52,7 +52,7 @@ No external services. No cron jobs. No extra dependencies beyond GLPI itself.
 | **Duplicate recipient guard** | Within-batch deduplication skips users sharing an email address so no recipient receives the same message twice |
 | **Send history** | Last 10 mass sends stored and displayed on the configuration page (date, subject, sent count, failed count) with server-timezone timestamps |
 | **Full i18n** | Base language: `en` (without dedicated `.po/.mo`); translations: `es_MX`, `fr_FR`, `de_DE` |
-| **Update check** | Configuration page checks GitHub releases (cached 24h) and shows an alert linking to the latest release when a newer version is available |
+| **Update check** | Configuration page checks GitHub releases (cached 6h) and shows an alert linking to the latest release when a newer version is available |
 
 ---
 
@@ -166,10 +166,10 @@ The configuration page also shows a **send history** table with the last 10 mass
 ```
 Browser                              PHP / GLPI
   │                                      │
-  ├─ queue_init POST ──────────────────► │ embedImagesAsBase64()
+  ├─ queue_init POST ──────────────────► │ prepare campaign payload
   │                                      │ buildHtmlBody() → HTML5 wrapper
   │                                      │ html2text() → plain-text alt body
-  │ ◄── { send_id, html, plain, … } ─── │ store job in glpi_configs
+  │ ◄── { send_id, html, plain, … } ─── │ store only queue metadata in glpi_configs
   │                                      │
   ├─ queue_process POST (offset=0) ────► │ SELECT users LIMIT batch_size OFFSET 0
   │                                      │ send batch via Symfony Mailer
@@ -188,7 +188,7 @@ Sending to hundreds of recipients in a single HTTP request would hit PHP's `max_
 ### Zero server-side file storage
 
 - **Attachments** — read as base64 in the browser, posted as JSON, decoded to a per-request temp file, attached to the email via Symfony Mailer, deleted immediately after the email is sent.
-- **Body images** — uploaded to `glpi_documents` by TinyMCE's native handler during composition. At send time, `embedImagesAsBase64()` converts each image to an inline data URI and immediately deletes the document record and file from the server. At no point does any image or attachment remain on the server after the email is sent.
+- **Body images** — uploaded to `glpi_documents` by TinyMCE's native handler during composition. At queue initialization they are read into the campaign payload as inline CID data and are not persisted in the queue. The current implementation does not delete arbitrary GLPI documents referenced by message content.
 
 ---
 
