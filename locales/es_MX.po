@@ -1,0 +1,459 @@
+# Mail Blast GLPI Plugin — Spanish (Mexico)
+# Copyright (C) 2026 Edwin Elias Alvarez
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Mail Blast\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-02 00:00-0700\n"
+"PO-Revision-Date: 2026-05-02 00:00-0700\n"
+"Last-Translator: Edwin Elias Alvarez\n"
+"Language-Team: Spanish (Mexico)\n"
+"Language: es_MX\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Mail Blast"
+msgstr "Correo Masivo"
+
+msgid "Send bulk email"
+msgstr "Envío masivo de correo"
+
+msgid "Compose message"
+msgstr "Redactar mensaje"
+
+msgid "Subject"
+msgstr "Asunto"
+
+msgid "Message body"
+msgstr "Cuerpo del mensaje"
+
+msgid "Footer"
+msgstr "Pie de página"
+
+msgid "Attachments"
+msgstr "Archivos adjuntos"
+
+msgid "Only file types allowed by GLPI are accepted"
+msgstr "Solo se aceptan tipos de archivo permitidos por GLPI"
+
+msgid "View allowed file types"
+msgstr "Ver tipos de archivo permitidos"
+
+msgid "Drag & drop files here or"
+msgstr "Arrastra y suelta archivos aquí o"
+
+msgid "browse"
+msgstr "seleccionar"
+
+msgid "user@company.com"
+msgstr "usuario@empresa.com"
+
+msgid "Remove"
+msgstr "Eliminar"
+
+msgid "B"
+msgstr "B"
+
+msgid "KB"
+msgstr "KB"
+
+msgid "MB"
+msgstr "MB"
+
+msgid "Test email"
+msgstr "Correo de prueba"
+
+msgid "Send to my address (administrator)"
+msgstr "Enviar a mi dirección (administrador)"
+
+msgid "Send to a specific address"
+msgstr "Enviar a una dirección específica"
+
+msgid "Test address"
+msgstr "Dirección de prueba"
+
+msgid "Send test email"
+msgstr "Enviar correo de prueba"
+
+msgid "Mass mailing"
+msgstr "Envío masivo"
+
+msgid "Active users with registered email"
+msgstr "Usuarios activos con correo registrado"
+
+msgid "No active users with registered email found"
+msgstr "No se encontraron usuarios activos con correo registrado"
+
+msgid "Send to all users"
+msgstr "Enviar a todos los usuarios"
+
+msgid "Subject is required"
+msgstr "El asunto es obligatorio"
+
+msgid "Body is required"
+msgstr "El cuerpo del mensaje es obligatorio"
+
+msgid "Test address is required"
+msgstr "La dirección de prueba es obligatoria"
+
+msgid "No email found for your account"
+msgstr "No se encontró correo electrónico para tu cuenta"
+
+msgid "Test sent successfully"
+msgstr "Prueba enviada correctamente"
+
+msgid "Test failed"
+msgstr "Error al enviar la prueba"
+
+msgid "Attachment rejected"
+msgstr "Archivo rechazado"
+
+msgid "Invalid address"
+msgstr "Dirección inválida"
+
+msgid "Upload error code %d"
+msgstr "Error de carga, código %d"
+
+msgid "%1$d email(s) sent to %2$d recipient(s)"
+msgstr "%1$d correo(s) enviado(s) a %2$d destinatario(s)"
+
+msgid "%1$d error(s) occurred"
+msgstr "Se produjeron %1$d error(es)"
+
+msgid "%1$s: MIME type %2$s is not allowed by GLPI"
+msgstr "%1$s: el tipo MIME %2$s no está permitido por GLPI"
+
+
+msgid "Sending emails"
+msgstr "Enviando correos"
+
+msgid "Progress"
+msgstr "Progreso"
+
+msgid "Sent"
+msgstr "Enviados"
+
+msgid "Errors"
+msgstr "Errores"
+
+msgid "Pending"
+msgstr "Pendientes"
+
+msgid "Elapsed"
+msgstr "Tiempo transcurrido"
+
+msgid "Failed addresses"
+msgstr "Direcciones fallidas"
+
+msgid "Close"
+msgstr "Cerrar"
+
+
+msgid "Attachment warning"
+msgstr "Advertencia de adjunto"
+
+msgid "Sending…"
+msgstr "Enviando…"
+
+msgid "Network error"
+msgstr "Error de red"
+
+msgid "Initialization error"
+msgstr "Error de inicialización"
+
+msgid "Missing send_id"
+msgstr "Falta el ID de envío"
+
+msgid "You are about to send an email to"
+msgstr "Estás a punto de enviar un correo a"
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr "Esta acción no se puede deshacer. Cada destinatario recibirá un correo."
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Yes, send now"
+msgstr "Sí, enviar ahora"
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr "Cancelar el envío? Los correos ya enviados no se podrán recuperar."
+
+msgid "Cancelling…"
+msgstr "Cancelando…"
+
+msgid "Sending cancelled."
+msgstr "Envío cancelado."
+
+msgid "Bad server response"
+msgstr "Respuesta inválida del servidor"
+
+msgid "Server error"
+msgstr "Error del servidor"
+
+msgid "Could not start sending"
+msgstr "No se pudo iniciar el envío"
+
+msgid "Batch failed"
+msgstr "Fallo en el lote"
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr "Texto plano. Se admiten negrita, cursiva y subrayado."
+
+msgid "Bold"
+msgstr "Negrita"
+
+msgid "Italic"
+msgstr "Cursiva"
+
+msgid "Underline"
+msgstr "Subrayado"
+
+msgid "user@company.com, other@company.com"
+msgstr "usuario@empresa.com, otro@empresa.com"
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr "Separa varias direcciones con comas. Máximo 5 direcciones."
+
+msgid "Mail Blast — Configuration"
+msgstr "Mail Blast — Configuración"
+
+msgid "Configuration"
+msgstr "Configuración"
+
+msgid "Settings saved successfully."
+msgstr "Configuración guardada correctamente."
+
+msgid "Batch size"
+msgstr "Tamaño de lote"
+
+msgid "Delay between batches (ms)"
+msgstr "Retraso entre lotes (ms)"
+
+msgid "Maximum total attachment size (MB)"
+msgstr "Tamaño máximo total de adjuntos (MB)"
+
+msgid "Number of emails sent per batch (1–100). Default: 15. Lower values reduce SMTP load; higher values speed up sending."
+msgstr "Número de correos enviados por lote (1–100). Predeterminado: 15. Valores más bajos reducen la carga SMTP; valores más altos aceleran el envío."
+
+msgid "Milliseconds to wait between batches (0–5000). Default: 120. Increase this if your SMTP server enforces rate limits."
+msgstr "Milisegundos de espera entre lotes (0–5000). Predeterminado: 120. Auméntalo si tu servidor SMTP aplica límites de velocidad."
+
+msgid "Maximum combined size of all attached files (1–100 MB). Default: 15 MB. Files exceeding this limit will be rejected in the browser before upload."
+msgstr "Tamaño combinado máximo de todos los archivos adjuntos (1–100 MB). Predeterminado: 15 MB. Los archivos que superen este límite serán rechazados en el navegador."
+
+msgid "Batch size must be between 1 and 100."
+msgstr "El tamaño de lote debe estar entre 1 y 100."
+
+msgid "Batch delay must be between 0 and 5000 ms."
+msgstr "El retraso entre lotes debe estar entre 0 y 5000 ms."
+
+msgid "Maximum attachment size must be between 1 and 100 MB."
+msgstr "El tamaño máximo de adjuntos debe estar entre 1 y 100 MB."
+
+msgid "Attachment size limit exceeded (%s MB max). File not added: %s"
+msgstr "Límite de tamaño de adjuntos superado (%s MB máx.). Archivo no agregado: %s"
+
+msgid "Back to Mail Blast"
+msgstr "Volver a Mail Blast"
+
+msgid "Sending"
+msgstr "Envío"
+
+msgid "Maximum combined attachment size"
+msgstr "Tamaño combinado máximo de archivos adjuntos"
+
+msgid "Image not inserted: combined size would exceed the %s MB limit set in Configuration."
+msgstr "Imagen no insertada: el tamaño combinado superaría el límite de %s MB configurado en Configuración."
+
+msgid "Download report"
+msgstr "Descargar informe"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Email"
+msgstr "Correo electrónico"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Reason"
+msgstr "Motivo"
+
+msgid "Failed"
+msgstr "Fallido"
+
+msgid "Generating…"
+msgstr "Generando…"
+
+msgid "Mail Blast sending report"
+msgstr "Informe de envío Mail Blast"
+
+msgid "Report"
+msgstr "Informe"
+
+msgid "active recipients"
+msgstr "destinatarios activos"
+
+msgid "Clear form"
+msgstr "Limpiar formulario"
+
+msgid "Preview"
+msgstr "Vista previa"
+
+msgid "Email preview"
+msgstr "Vista previa del correo"
+
+msgid "Recent sends"
+msgstr "Envíos recientes"
+
+msgid "Sending failed — no emails were delivered."
+msgstr "Error de envío — no se entregó ningún correo."
+
+msgid "All emails sent successfully."
+msgstr "Todos los correos se enviaron correctamente."
+
+msgid "sent"
+msgstr "enviados"
+
+msgid "failed"
+msgstr "fallidos"
+
+msgid "Available placeholders: {nombre}, {nombre_completo}, {email}"
+msgstr "Variables disponibles: {nombre}, {nombre_completo}, {email}"
+
+msgid "Last 5 mass sends"
+msgstr "Últimos 5 envíos masivos"
+
+msgid "Last 10 mass sends"
+msgstr "Últimos 10 envíos masivos"
+
+msgid "No sends recorded yet. History is populated after each mass mailing."
+msgstr "No hay envíos registrados aún. El historial se llena después de cada envío masivo."
+
+msgid "File type not allowed"
+msgstr "Tipo de archivo no permitido"
+
+msgid "Upload error"
+msgstr "Error al subir archivo"
+
+msgid "Attachment size limit exceeded"
+msgstr "Límite de tamaño de adjuntos superado"
+
+msgid "Mass send requires JavaScript to be enabled."
+msgstr "El envío masivo requiere JavaScript habilitado."
+
+msgid "Message body is too large."
+msgstr "El cuerpo del mensaje es demasiado grande."
+
+msgid "Please wait %d seconds before sending again."
+msgstr "Espera %d segundos antes de enviar de nuevo."
+
+msgid "server time"
+msgstr "hora del servidor"
+
+msgid "Send to"
+msgstr "Enviar a"
+
+msgid "All active users"
+msgstr "Todos los usuarios activos"
+
+msgid "Specific organizations"
+msgstr "Organizaciones específicas"
+
+msgid "Specific profiles"
+msgstr "Perfiles específicos"
+
+msgid "Specific users"
+msgstr "Usuarios específicos"
+
+msgid "Select organizations"
+msgstr "Seleccionar organizaciones"
+
+msgid "Select profiles"
+msgstr "Seleccionar perfiles"
+
+msgid "Select users"
+msgstr "Seleccionar usuarios"
+
+msgid "Hold Ctrl / Cmd to select multiple."
+msgstr "Mantén Ctrl / Cmd para seleccionar varios."
+
+msgid "Send from"
+msgstr "Enviar desde"
+
+msgid "A new version is available"
+msgstr "Hay una nueva versión disponible"
+
+msgid "current"
+msgstr "actual"
+
+msgid "View releases"
+msgstr "Ver versiones"
+
+msgid "Always keep this plugin up to date"
+msgstr "Mantén siempre este plugin actualizado"
+
+msgid "check the latest version"
+msgstr "consulta la última versión"
+
+msgid "Uses the address configured in Configuration → Notifications → Email."
+msgstr "Utiliza la dirección configurada en Configuración → Notificaciones → Correo electrónico."
+
+msgid "Email notification settings"
+msgstr "Configuración de notificaciones por correo electrónico"
+
+msgid "Default (GLPI configuration)"
+msgstr "Predeterminado (configuración de GLPI)"
+
+msgid "Reply to"
+msgstr "Responder a"
+
+msgid "Default (no override)"
+msgstr "Predeterminado (sin anulación)"
+
+msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
+msgstr "Las respuestas de los destinatarios llegarán a este buzón en lugar de la dirección de envío."
+
+msgid "This send will use %s as both the From and Reply-To address."
+msgstr "Este envío usará %s como dirección de remitente (From) y de respuesta (Reply-To)."
+
+msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
+msgstr "Este envío usará %s como dirección de remitente (From). Las respuestas usarán la configuración predeterminada de GLPI."
+
+msgid "This send will use the default GLPI configuration for both From and replies."
+msgstr "Este envío usará la configuración predeterminada de GLPI tanto para el remitente como para las respuestas."
+
+msgid "Confirm send"
+msgstr "Confirmar envío"
+
+msgid "Send to selected recipients"
+msgstr "Enviar a los destinatarios seleccionados"
+
+msgid "Select at least one item to send to specific recipients."
+msgstr "Selecciona al menos un elemento para enviar a destinatarios específicos."
+msgid "Sent status"
+msgstr "Enviado"
+
+msgid "Failed status"
+msgstr "Fallido"
+
+msgid "Pending status"
+msgstr "Pendiente"
+msgid "Version"
+msgstr "Versión"
+msgid "Installed"
+msgstr "Instalada"
+msgid "Latest stable"
+msgstr "Última estable"
+msgid "Unavailable"
+msgstr "No disponible"
+msgid "You are using the latest stable version."
+msgstr "Estás usando la última versión estable."
+msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
+msgstr "La comprobación de versión de GitHub no está disponible actualmente. El plugin volverá a intentarlo automáticamente más tarde."
+

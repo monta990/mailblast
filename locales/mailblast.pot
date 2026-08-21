@@ -1,0 +1,462 @@
+# Mail Blast GLPI Plugin
+# Copyright (C) 2026 Edwin Elias Alvarez
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Mail Blast 1.7.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-02 00:00-0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+msgid "Mail Blast"
+msgstr ""
+
+msgid "Send bulk email"
+msgstr ""
+
+msgid "Compose message"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Message body"
+msgstr ""
+
+msgid "Footer"
+msgstr ""
+
+msgid "Attachments"
+msgstr ""
+
+msgid "Only file types allowed by GLPI are accepted"
+msgstr ""
+
+msgid "View allowed file types"
+msgstr ""
+
+msgid "Drag & drop files here or"
+msgstr ""
+
+msgid "browse"
+msgstr ""
+
+msgid "user@company.com"
+msgstr ""
+
+msgid "Remove"
+msgstr ""
+
+msgid "B"
+msgstr ""
+
+msgid "KB"
+msgstr ""
+
+msgid "MB"
+msgstr ""
+
+msgid "Test email"
+msgstr ""
+
+msgid "Send to my address (administrator)"
+msgstr ""
+
+msgid "Send to a specific address"
+msgstr ""
+
+msgid "Test address"
+msgstr ""
+
+msgid "Send test email"
+msgstr ""
+
+msgid "Mass mailing"
+msgstr ""
+
+msgid "Active users with registered email"
+msgstr ""
+
+msgid "No active users with registered email found"
+msgstr ""
+
+msgid "Send to all users"
+msgstr ""
+
+msgid "Subject is required"
+msgstr ""
+
+msgid "Body is required"
+msgstr ""
+
+msgid "Test address is required"
+msgstr ""
+
+msgid "No email found for your account"
+msgstr ""
+
+msgid "Test sent successfully"
+msgstr ""
+
+msgid "Test failed"
+msgstr ""
+
+msgid "Attachment rejected"
+msgstr ""
+
+msgid "Invalid address"
+msgstr ""
+
+msgid "Upload error code %d"
+msgstr ""
+
+msgid "%1$d email(s) sent to %2$d recipient(s)"
+msgstr ""
+
+msgid "%1$d error(s) occurred"
+msgstr ""
+
+msgid "%1$s: MIME type %2$s is not allowed by GLPI"
+msgstr ""
+
+
+msgid "Sending emails"
+msgstr ""
+
+msgid "Progress"
+msgstr ""
+
+msgid "Sent"
+msgstr ""
+
+msgid "Errors"
+msgstr ""
+
+msgid "Pending"
+msgstr ""
+
+msgid "Elapsed"
+msgstr ""
+
+msgid "Failed addresses"
+msgstr ""
+
+msgid "Close"
+msgstr ""
+
+
+msgid "Attachment warning"
+msgstr ""
+
+
+
+msgid "Sending…"
+msgstr ""
+
+msgid "Network error"
+msgstr ""
+
+msgid "Initialization error"
+msgstr ""
+
+msgid "Missing send_id"
+msgstr ""
+
+msgid "You are about to send an email to"
+msgstr ""
+
+msgid "This action cannot be undone. Each recipient will receive one email."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Yes, send now"
+msgstr ""
+
+msgid "Cancel sending? Emails already sent will not be recalled."
+msgstr ""
+
+msgid "Cancelling…"
+msgstr ""
+
+msgid "Sending cancelled."
+msgstr ""
+
+msgid "Bad server response"
+msgstr ""
+
+msgid "Server error"
+msgstr ""
+
+msgid "Could not start sending"
+msgstr ""
+
+msgid "Batch failed"
+msgstr ""
+
+msgid "Plain text. Bold, italic and underline are supported."
+msgstr ""
+
+msgid "Bold"
+msgstr ""
+
+msgid "Italic"
+msgstr ""
+
+msgid "Underline"
+msgstr ""
+
+msgid "user@company.com, other@company.com"
+msgstr ""
+
+msgid "Separate multiple addresses with commas. Maximum 5 addresses."
+msgstr ""
+
+msgid "Mail Blast — Configuration"
+msgstr ""
+
+msgid "Configuration"
+msgstr ""
+
+msgid "Settings saved successfully."
+msgstr ""
+
+msgid "Batch size"
+msgstr ""
+
+msgid "Delay between batches (ms)"
+msgstr ""
+
+msgid "Maximum total attachment size (MB)"
+msgstr ""
+
+msgid "Number of emails sent per batch (1–100). Default: 15. Lower values reduce SMTP load; higher values speed up sending."
+msgstr ""
+
+msgid "Milliseconds to wait between batches (0–5000). Default: 120. Increase this if your SMTP server enforces rate limits."
+msgstr ""
+
+msgid "Maximum combined size of all attached files (1–100 MB). Default: 15 MB. Files exceeding this limit will be rejected in the browser before upload."
+msgstr ""
+
+msgid "Batch size must be between 1 and 100."
+msgstr ""
+
+msgid "Batch delay must be between 0 and 5000 ms."
+msgstr ""
+
+msgid "Maximum attachment size must be between 1 and 100 MB."
+msgstr ""
+
+msgid "Attachment size limit exceeded (%s MB max). File not added: %s"
+msgstr ""
+
+msgid "Back to Mail Blast"
+msgstr ""
+
+msgid "Sending"
+msgstr ""
+
+msgid "Maximum combined attachment size"
+msgstr ""
+
+msgid "Image not inserted: combined size would exceed the %s MB limit set in Configuration."
+msgstr ""
+
+msgid "Download report"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Email"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Reason"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Generating…"
+msgstr ""
+
+msgid "Mail Blast sending report"
+msgstr ""
+
+msgid "Report"
+msgstr ""
+
+msgid "active recipients"
+msgstr ""
+
+msgid "Clear form"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Email preview"
+msgstr ""
+
+msgid "Recent sends"
+msgstr ""
+
+msgid "Sending failed — no emails were delivered."
+msgstr ""
+
+msgid "All emails sent successfully."
+msgstr ""
+
+msgid "sent"
+msgstr ""
+
+msgid "failed"
+msgstr ""
+
+msgid "Available placeholders: {nombre}, {nombre_completo}, {email}"
+msgstr ""
+
+msgid "Last 5 mass sends"
+msgstr ""
+
+msgid "Last 10 mass sends"
+msgstr ""
+
+msgid "No sends recorded yet. History is populated after each mass mailing."
+msgstr ""
+
+msgid "File type not allowed"
+msgstr ""
+
+msgid "Upload error"
+msgstr ""
+
+msgid "Attachment size limit exceeded"
+msgstr ""
+
+msgid "Mass send requires JavaScript to be enabled."
+msgstr ""
+
+msgid "Message body is too large."
+msgstr ""
+
+msgid "Please wait %d seconds before sending again."
+msgstr ""
+
+msgid "server time"
+msgstr ""
+
+msgid "Send to"
+msgstr ""
+
+msgid "All active users"
+msgstr ""
+
+msgid "Specific organizations"
+msgstr ""
+
+msgid "Specific profiles"
+msgstr ""
+
+msgid "Specific users"
+msgstr ""
+
+msgid "Select organizations"
+msgstr ""
+
+msgid "Select profiles"
+msgstr ""
+
+msgid "Select users"
+msgstr ""
+
+msgid "Hold Ctrl / Cmd to select multiple."
+msgstr ""
+
+msgid "Send from"
+msgstr ""
+
+msgid "A new version is available"
+msgstr ""
+
+msgid "current"
+msgstr ""
+
+msgid "View releases"
+msgstr ""
+
+msgid "Always keep this plugin up to date"
+msgstr ""
+
+msgid "check the latest version"
+msgstr ""
+
+msgid "Uses the address configured in Configuration → Notifications → Email."
+msgstr ""
+
+msgid "Email notification settings"
+msgstr ""
+
+msgid "Default (GLPI configuration)"
+msgstr ""
+
+msgid "Reply to"
+msgstr ""
+
+msgid "Default (no override)"
+msgstr ""
+
+msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
+msgstr ""
+
+msgid "This send will use %s as both the From and Reply-To address."
+msgstr ""
+
+msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
+msgstr ""
+
+msgid "This send will use the default GLPI configuration for both From and replies."
+msgstr ""
+
+msgid "Confirm send"
+msgstr ""
+
+msgid "Send to selected recipients"
+msgstr ""
+
+msgid "Select at least one item to send to specific recipients."
+msgstr ""
+
+msgid "Sent status"
+msgstr ""
+
+msgid "Failed status"
+msgstr ""
+
+msgid "Pending status"
+msgstr ""
+msgid "Version"
+msgstr ""
+msgid "Installed"
+msgstr ""
+msgid "Latest stable"
+msgstr ""
+msgid "Unavailable"
+msgstr ""
+msgid "You are using the latest stable version."
+msgstr ""
+msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
+msgstr ""
+

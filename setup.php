@@ -5,9 +5,12 @@
  * @author  Edwin Elias Alvarez
  * @license GPL-3.0-or-later
  */
-define('PLUGIN_MAILBLAST_VERSION',  '1.7.6');
+define('PLUGIN_MAILBLAST_VERSION',  '1.8.0');
 define('PLUGIN_MAILBLAST_MIN_GLPI', '11.0.0');
 define('PLUGIN_MAILBLAST_MAX_GLPI', '12.99.99');
+
+// GLPI automatically registers the plugin PSR-4 namespace from src/.
+// No plugin-local autoloader or Composer dependency is required.
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 
@@ -53,41 +56,19 @@ function plugin_mailblast_check_config(bool $verbose = false): bool
     return true;
 }
 
-/**
- * Returns the plugin web root (e.g. /glpi/plugins/mailblast or /glpi/marketplace/mailblast).
- * Uses GLPI_MARKETPLACE_DIR to detect location — avoids realpath/symlink issues.
- */
-function plugin_mailblast_web_dir(): string
-{
-    global $CFG_GLPI;
-    $plugin_dir     = str_replace('\\', '/', __DIR__);
-    $marketplace_dir = defined('GLPI_MARKETPLACE_DIR')
-        ? str_replace('\\', '/', GLPI_MARKETPLACE_DIR)
-        : null;
-    $subdir = ($marketplace_dir && str_starts_with($plugin_dir, $marketplace_dir))
-        ? 'marketplace'
-        : 'plugins';
-    return $CFG_GLPI['root_doc'] . '/' . $subdir . '/mailblast';
-}
-
 // ─── Initialisation (called by GLPI on every page load) ──────────────────────
 
 function plugin_init_mailblast(): void
 {
     global $PLUGIN_HOOKS;
 
-    // Required for GLPI 10+ CSRF protection
-    $PLUGIN_HOOKS['csrf_compliant']['mailblast'] = true;
+    // GLPI prefixes config_page entries with the plugin web path.
+    // Keep this relative to the plugin so it resolves to /plugins/mailblast/Configuration.
+    $PLUGIN_HOOKS['config_page']['mailblast'] = 'Configuration';
 
-    // Register the main class so the menu system can discover it
-    Plugin::registerClass('PluginMailblastMailblast');
+    Plugin::registerClass(\GlpiPlugin\Mailblast\MailBlastMenu::class);
 
-    // ── Gear icon in Setup → Plugins list ────────────────────────────────
-    // This is the hook that makes the wrench/gear icon appear and clickable.
-    $PLUGIN_HOOKS['config_page']['mailblast'] = 'front/config.php';
-
-    // ── Administration menu entry ─────────────────────────────────────────
     if (Session::haveRight('config', UPDATE)) {
-        $PLUGIN_HOOKS['menu_toadd']['mailblast'] = ['admin' => 'PluginMailblastMailblast'];
+        $PLUGIN_HOOKS['menu_toadd']['mailblast'] = ['admin' => \GlpiPlugin\Mailblast\MailBlastMenu::class];
     }
 }

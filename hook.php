@@ -12,6 +12,15 @@ function plugin_mailblast_install(): bool
 {
     // No custom tables — queue is managed via glpi_configs (already exists)
     // and LIMIT/OFFSET directly on glpi_useremails at send time.
+    //
+    // GLPI 11.0.9+ and GLPI 12 handle the plugin/template cache lifecycle
+    // in the core. Older GLPI 11 releases require the plugin to invalidate
+    // the cache explicitly after installation or upgrade so that compiled
+    // Twig templates from a previous plugin version are not reused.
+    if (version_compare(GLPI_VERSION, '11.0.9', '<')) {
+        (new \Glpi\Cache\CacheManager())->resetAllCaches();
+    }
+
     return true;
 }
 
@@ -27,11 +36,4 @@ function plugin_mailblast_uninstall(): bool
     }
 
     return true;
-}
-
-// ─── Gear icon in the plugin list ────────────────────────────────────────────
-
-function plugin_mailblast_haveConfigPage(): bool
-{
-    return Session::haveRight('config', UPDATE);
 }

@@ -19,7 +19,7 @@ Send a bulk email to every active GLPI user that has a default email address reg
 
 - **Rich-text body editor** (TinyMCE) — bold, italic, tables, images, lists, indentation, text alignment
 - **Simple footer editor** — plain text with bold, italic and underline; line breaks preserved
-- **Inline image embedding** — images inserted in the body are converted to base64 at send time and immediately deleted from the server
+- **Inline image embedding** — images inserted in the body are converted to inline content at send time without deleting the source GLPI document
 - **Attachments** — drag-and-drop or file picker; only MIME types allowed by GLPI are accepted; nothing stored on the server
 - **Progress modal** — real-time batch progress bar showing sent / errors / pending count and elapsed time; cancellable
 - **Queue-based sending** — recipients processed in batches of 15; the browser never freezes
@@ -57,10 +57,10 @@ Envía un correo masivo a todos los usuarios activos de GLPI que tengan una dire
    </authors>
       <versions>
       <version>
-         <num>1.7.6</num>
+         <num>1.8.0</num>
          <compatibility>~11.0</compatibility>
          <compatibility>~12.0</compatibility>
-         <download_url>https://github.com/monta990/mailblast/releases/download/1.7.6/mailblast-1.7.6.zip</download_url>
+         <download_url>https://github.com/monta990/mailblast/releases/download/1.8.0/mailblast-1.8.0.zip</download_url>
       </version>
    </versions>
    <langs>
