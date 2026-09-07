@@ -29,13 +29,14 @@ final class ReportService
             $safeEmail = preg_replace('/^([=+\-@])/', "'$1", (string) ($row['email'] ?? ''));
             $safeReason = preg_replace('/^([=+\-@])/', "'$1", (string) ($row['reason'] ?? ''));
             $ws->setCellValue('A' . $rowNumber, $stamp);
-            $ws->setCellValue('B' . $rowNumber, $subject);
+            $safeSubject = preg_replace('/^([=+\-@])/', "'$1", (string) $subject);
+            $ws->setCellValue('B' . $rowNumber, $safeSubject);
             $ws->setCellValue('C' . $rowNumber, $safeEmail);
             $status = match ((string) ($row['status'] ?? '')) {
                 'sent' => __('Sent status', 'mailblast'),
                 'failed' => __('Failed status', 'mailblast'),
                 'pending' => __('Pending status', 'mailblast'),
-                default => (string) ($row['status'] ?? ''),
+                default => self::normalizeReportStatus($row['status'] ?? ''),
             };
             $ws->setCellValue('D' . $rowNumber, $status);
             $ws->setCellValue('E' . $rowNumber, $safeReason);
@@ -52,4 +53,13 @@ final class ReportService
             'filename' => 'mailblast_report_' . gmdate('Y-m-d_His') . '.xlsx',
         ];
     }
+
+    private static function normalizeReportStatus(mixed $status): string
+    {
+        return match ((string) $status) {
+            'sent', 'failed', 'pending' => (string) $status,
+            default => '',
+        };
+    }
+
 }

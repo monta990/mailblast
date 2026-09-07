@@ -13,13 +13,26 @@ final class ConfigurationService
 {
     public const CONFIG_CONTEXT = 'plugin:mailblast';
 
-    public function saveSettings(int $batchSize, int $batchDelay, int $maxAttachment): void
+    public function saveSettings(int $batchSize, int $batchDelay, int $maxAttachment, int $historyLimit): void
     {
         Config::setConfigurationValues(self::CONFIG_CONTEXT, [
             'batch_size' => $batchSize,
             'batch_delay_ms' => $batchDelay,
             'max_attachment_mb' => $maxAttachment,
+            'history_limit' => $historyLimit,
         ]);
+
+        // Apply a reduced history limit immediately when the administrator
+        // lowers the configured value. Existing records are kept only up to
+        // the newly selected limit.
+        $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['send_history']);
+        $list = json_decode((string) ($cfg['send_history'] ?? '[]'), true);
+        if (is_array($list)) {
+            $list = array_slice($list, 0, $historyLimit);
+            Config::setConfigurationValues(self::CONFIG_CONTEXT, [
+                'send_history' => json_encode($list),
+            ]);
+        }
     }
 
     public function saveFormConfig(string $subject, string $body, string $footer): void
@@ -65,6 +78,13 @@ final class ConfigurationService
             $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['max_attachment_mb']);
             $v   = (int) ($cfg['max_attachment_mb'] ?? 0);
             return ($v >= 1 && $v <= 100) ? $v : 15;
+        }
+
+    public function getHistoryLimit(): int
+        {
+            $cfg = Config::getConfigurationValues(self::CONFIG_CONTEXT, ['history_limit']);
+            $v   = (int) ($cfg['history_limit'] ?? 10);
+            return ($v >= 10 && $v <= 100) ? $v : 10;
         }
 
     public function cleanupStaleJobs(int $maxAgeSeconds = 7200): void
@@ -114,7 +134,7 @@ final class ConfigurationService
                 'errors'  => $errors,
             ]);
     
-            $list = array_slice($list, 0, 10);
+            $list = array_slice($list, 0, $this->getHistoryLimit());
             Config::setConfigurationValues(self::CONFIG_CONTEXT, [
                 'send_history' => json_encode($list),
             ]);
@@ -138,11 +158,20 @@ final class ConfigurationService
     {
         $cache = $this->readVersionCache();
         $now = time();
-        $cacheAge = $now - (int) ($cache['checked_at'] ?? 0);
-        $cacheFresh = $cacheAge >= 0 && $cacheAge < 21600; // 6 hours
-
+        $cacheVersion = 2;
+        $storedVersion = (int) ($cache['cache_version'] ?? 0);
         $latest = (string) ($cache['latest'] ?? '');
         $checkOk = (bool) ($cache['check_ok'] ?? false);
+        $checkedAt = (int) ($cache['checked_at'] ?? 0);
+
+        // Successful checks are cached for six hours. Failed checks are only
+        // negatively cached for five minutes so a transient outage does not
+        // leave the UI showing an old failure for six hours.
+        $cacheTtl = $checkOk ? 21600 : 300;
+        $cacheFresh = $storedVersion === $cacheVersion
+            && $checkedAt > 0
+            && ($now - $checkedAt) >= 0
+            && ($now - $checkedAt) < $cacheTtl;
 
         if (!$cacheFresh) {
             $fetched = $this->fetchLatestGithubRelease();
@@ -150,27 +179,28 @@ final class ConfigurationService
             if ($checkOk) {
                 $latest = $fetched;
             }
+            $checkedAt = $now;
 
-            // Record both success and failure. On failure, keep the last known
-            // stable version as a stale fallback, but do not present it as a
-            // current successful check.
             $this->writeVersionCache([
-                'checked_at' => $now,
-                'latest'     => $latest,
-                'check_ok'   => $checkOk,
+                'cache_version' => $cacheVersion,
+                'checked_at'    => $checkedAt,
+                'latest'        => $latest,
+                'check_ok'      => $checkOk,
             ]);
         }
 
-        $available = $checkOk
-            && $latest !== ''
+        // Display the last successful stable release regardless of whether
+        // it is older, equal to, or newer than the installed version.
+        // Version comparison only determines whether an upgrade is available.
+        $checkAvailable = $latest !== '' && $checkOk;
+        $updateAvailable = $checkAvailable
             && version_compare($latest, PLUGIN_MAILBLAST_VERSION, '>');
-
         return [
             'current'          => PLUGIN_MAILBLAST_VERSION,
             'latest'           => $latest,
-            'update_available' => $available,
-            'check_available'  => $checkOk && $latest !== '',
-            'checked_at'       => $cacheFresh ? (int) ($cache['checked_at'] ?? 0) : $now,
+            'update_available' => $updateAvailable,
+            'check_available'  => $checkAvailable,
+            'checked_at'       => $checkedAt,
             'releases_url'     => 'https://github.com/monta990/mailblast/releases',
         ];
     }
@@ -178,12 +208,22 @@ final class ConfigurationService
     private function fetchLatestGithubRelease(): string
     {
         if (!function_exists('curl_init')) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: cURL extension is unavailable.\n"
+            );
             return '';
         }
 
-        $url = 'https://api.github.com/repos/monta990/mailblast/releases?per_page=30';
+        // Use GitHub's dedicated latest-release endpoint instead of the much
+        // larger releases list, preventing false failures due to response size.
+        $url = 'https://api.github.com/repos/monta990/mailblast/releases/latest';
         $ch = curl_init($url);
         if ($ch === false) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: unable to initialize cURL.\n"
+            );
             return '';
         }
 
@@ -193,7 +233,7 @@ final class ConfigurationService
             CURLOPT_CONNECTTIMEOUT => 2,
             CURLOPT_TIMEOUT        => 4,
             CURLOPT_HTTPHEADER     => [
-                'User-Agent: mailblast-glpi-plugin/1.8',
+                'User-Agent: mailblast-glpi-plugin',
                 'Accept: application/vnd.github+json',
             ],
             CURLOPT_SSL_VERIFYPEER => true,
@@ -202,40 +242,68 @@ final class ConfigurationService
         ]);
 
         $body = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
         $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if (!is_string($body) || $body === '' || $code !== 200 || strlen($body) > 65536) {
+        if (!is_string($body) || $body === '') {
+            $detail = $error !== '' ? ' (' . $error . ')' : '';
+            \Toolbox::logInFile(
+                'mailblast',
+                sprintf(
+                    "GitHub version check failed: cURL error %d%s.\n",
+                    $errno,
+                    $detail
+                )
+            );
             return '';
         }
 
-        $releases = json_decode($body, true);
-        if (!is_array($releases)) {
+        if ($code !== 200) {
+            \Toolbox::logInFile(
+                'mailblast',
+                sprintf("GitHub version check failed: HTTP %d.\n", $code)
+            );
             return '';
         }
 
-        $versions = [];
-        foreach ($releases as $release) {
-            if (!is_array($release)
-                || !empty($release['draft'])
-                || !empty($release['prerelease'])) {
-                continue;
-            }
-
-            $tag = ltrim((string) ($release['tag_name'] ?? ''), 'vV');
-            if (preg_match('/^\d+(?:\.\d+){0,3}$/', $tag) !== 1) {
-                continue;
-            }
-
-            $versions[] = $tag;
-        }
-
-        if ($versions === []) {
+        if (strlen($body) > 65536) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: response exceeded 64 KB.\n"
+            );
             return '';
         }
 
-        usort($versions, 'version_compare');
-        return (string) end($versions);
+        $release = json_decode($body, true);
+        if (!is_array($release)) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: invalid JSON response.\n"
+            );
+            return '';
+        }
+
+        // Defense in depth: never treat a draft or prerelease as stable.
+        if (!empty($release['draft']) || !empty($release['prerelease'])) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: latest release is not stable.\n"
+            );
+            return '';
+        }
+
+        $tag = ltrim((string) ($release['tag_name'] ?? ''), 'vV');
+        if (preg_match('/^\d+(?:\.\d+){0,3}$/', $tag) !== 1) {
+            \Toolbox::logInFile(
+                'mailblast',
+                "GitHub version check failed: invalid release tag.\n"
+            );
+            return '';
+        }
+
+        return $tag;
     }
 
     private function getVersionCachePath(): string

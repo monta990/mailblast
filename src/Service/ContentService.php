@@ -38,8 +38,36 @@ final class ContentService
 
     public function sanitizeFooter(string $footer): string
     {
-        $footer = strip_tags($footer, '<b><strong><i><em><u><br><p><div><span><a>');
-        return preg_replace('/\s+on[a-z]+\s*=\s*(["\']).*?\1/isu', '', $footer) ?? '';
+        $allowed_tags = '<b><strong><i><em><u><br><p><div><span><a>';
+        $footer = strip_tags($footer, $allowed_tags);
+
+        $footer = preg_replace_callback(
+            '~<a\\b([^>]*)>~i',
+            static function (array $match): string {
+                $attrs = $match[1];
+
+                if (!preg_match('~\\bhref\\s*=\\s*(["\\\'])(.*?)\\1~i', $attrs, $href)) {
+                    return '<a>';
+                }
+
+                $url = trim(html_entity_decode($href[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+                if (!preg_match('~^(?:https?://|mailto:)~i', $url)) {
+                    return '<a>';
+                }
+
+                $safe_url = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+                return '<a href="' . $safe_url . '" rel="noopener noreferrer">';
+            },
+            $footer
+        );
+
+        // Remove event handlers and attributes that can carry executable or embedded content.
+        $footer = preg_replace('~\\s+on[a-z]+\\s*=\\s*(["\\\']).*?\\1~isu', '', $footer);
+        $footer = preg_replace('~\\s+(?:style|srcdoc)\\s*=\\s*(["\\\']).*?\\1~isu', '', $footer);
+
+        return $footer;
     }
 
     public function buildHtmlBody(string $htmlBody, string $footer): string

@@ -452,8 +452,7 @@ msgid "Latest stable"
 msgstr "Última estable"
 msgid "Unavailable"
 msgstr "No disponible"
-msgid "You are using the latest stable version."
-msgstr "Estás usando la última versión estable."
 msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
 msgstr "La comprobación de versión de GitHub no está disponible actualmente. El plugin volverá a intentarlo automáticamente más tarde."
+
 
