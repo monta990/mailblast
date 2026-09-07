@@ -36,12 +36,7 @@
             {{ __('A new version is available', 'mailblast') }}: <strong>{{ version_check.latest }}</strong>.
           </span>
         </div>
-      {% elseif version_check.check_available %}
-        <div class="alert alert-success py-2 mb-2 d-flex align-items-center gap-2" role="status">
-          <i class="ti ti-circle-check"></i>
-          <span>{{ __('You are using the latest stable version.', 'mailblast') }}</span>
-        </div>
-      {% else %}
+      {% elseif not version_check.check_available %}
         <div class="alert alert-secondary py-2 mb-2 d-flex align-items-center gap-2" role="status">
           <i class="ti ti-cloud-off"></i>
           <span>{{ __('GitHub version check is currently unavailable. The plugin will retry automatically later.', 'mailblast') }}</span>
@@ -137,8 +132,27 @@
 
     <div class="card mb-4">
       <div class="card-header fw-bold">
+        <i class="ti ti-history me-1"></i>{{ __('History', 'mailblast') }}
+      </div>
+      <div class="card-body">
+        <div class="mb-0">
+          <label class="form-label fw-semibold" for="mb_cfg_history_limit">
+            {{ __('History limit', 'mailblast') }}
+          </label>
+          <input type="number" id="mb_cfg_history_limit" name="history_limit"
+                 class="form-control" style="max-width:160px"
+                 min="10" max="100" value="{{ history_limit }}">
+          <div class="form-text text-muted">
+            {{ __('Number of recent mass sends to keep (10–100). Default: 10.', 'mailblast') }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold">
         <i class="ti ti-history me-1"></i>{{ __('Recent sends', 'mailblast') }}
-        <span class="text-muted fw-normal small ms-2">{{ __('Last 10 mass sends', 'mailblast') }}</span>
+        <span class="text-muted fw-normal small ms-2">{{ __('Last %count% mass sends', 'mailblast', {'%count%': history_limit}) }}</span>
       </div>
       <div class="card-body p-0">
         {% if history is empty %}

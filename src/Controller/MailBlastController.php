@@ -51,6 +51,7 @@ final class MailBlastController extends AbstractController
             $batchSize = $request->request->getInt('batch_size', 15);
             $batchDelay = $request->request->getInt('batch_delay_ms', 120);
             $maxAttachment = $request->request->getInt('max_attachment_mb', 15);
+            $historyLimit = $request->request->getInt('history_limit', 10);
             if ($batchSize < 1 || $batchSize > 100) {
                 $errors[] = __('Batch size must be between 1 and 100.', 'mailblast');
             }
@@ -60,8 +61,11 @@ final class MailBlastController extends AbstractController
             if ($maxAttachment < 1 || $maxAttachment > 100) {
                 $errors[] = __('Maximum attachment size must be between 1 and 100 MB.', 'mailblast');
             }
+            if ($historyLimit < 10 || $historyLimit > 100) {
+                $errors[] = __('History limit must be between 10 and 100.', 'mailblast');
+            }
             if ($errors === []) {
-                $configurationService->saveSettings($batchSize, $batchDelay, $maxAttachment);
+                $configurationService->saveSettings($batchSize, $batchDelay, $maxAttachment, $historyLimit);
                 $saved = true;
             }
         }
@@ -74,6 +78,7 @@ final class MailBlastController extends AbstractController
             'batch_size' => $configurationService->getBatchSize(),
             'batch_delay' => $configurationService->getBatchDelayMs(),
             'max_attachment' => $configurationService->getMaxAttachmentMb(),
+            'history_limit' => $configurationService->getHistoryLimit(),
             'user_count' => $recipientService->countActiveUsersWithEmail(),
             'history' => $configurationService->getHistory(),
             'timezone' => date_default_timezone_get(),

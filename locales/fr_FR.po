@@ -457,3 +457,6 @@ msgstr "Vous utilisez la dernière version stable."
 msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
 msgstr "La vérification de version GitHub est actuellement indisponible. Le plugin réessaiera automatiquement plus tard."
 
+
+msgid "Your installed version is newer than the latest stable release published on GitHub."
+msgstr "La version installée est plus récente que la dernière version stable publiée sur GitHub."
