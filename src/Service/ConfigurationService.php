@@ -37,6 +37,11 @@ final class ConfigurationService
 
     public function saveFormConfig(string $subject, string $body, string $footer): void
         {
+            // Defense in depth: callers currently sanitize the footer before reaching
+            // this method, but keeping the storage boundary sanitized prevents future
+            // callers from persisting HTML that is later rendered with Twig |raw.
+            $footer = (new ContentService())->sanitizeFooter($footer);
+
             Config::setConfigurationValues(self::CONFIG_CONTEXT, [
                 'last_subject' => $subject,
                 'last_footer'  => $footer,
@@ -50,10 +55,15 @@ final class ConfigurationService
                 ['last_subject', 'last_footer']
             );
     
+            $footer = (string) ($cfg['last_footer'] ?? '');
+            // Sanitize again on read so values persisted by older plugin versions
+            // are safe before they reach the Twig template using |raw.
+            $footer = (new ContentService())->sanitizeFooter($footer);
+
             return [
                 'subject' => (string) ($cfg['last_subject'] ?? ''),
                 'body'    => '',  // never persisted — editor always starts blank
-                'footer'  => (string) ($cfg['last_footer']  ?? ''),
+                'footer'  => $footer,
             ];
         }
 

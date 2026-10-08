@@ -142,22 +142,30 @@ final class AttachmentService
 
     private function docIdToBytes(int $docId): ?array
         {
-            global $DB;
-    
-            $iterator = $DB->request([
-                'SELECT' => ['filepath', 'mime'],
-                'FROM'   => 'glpi_documents',
-                'WHERE'  => ['id' => $docId, 'is_deleted' => 0],
-            ]);
-    
-            if (!$iterator->count()) {
+            if ($docId <= 0) {
                 return null;
             }
-    
-            $row      = $iterator->current();
-            $rawPath  = GLPI_DOC_DIR . '/' . $row['filepath'];
+
+            // Reuse GLPI's document authorization before touching the file on disk.
+            // Mail Blast itself is protected by config/UPDATE, but that right must
+            // never become an implicit bypass of the user's Document READ/entity rights.
+            $document = new \Document();
+            if (!$document->getFromDB($docId)) {
+                return null;
+            }
+
+            if ((int) ($document->fields['is_deleted'] ?? 0) !== 0) {
+                return null;
+            }
+
+            if (!$document->can($docId, READ) || !$document->canViewItem()) {
+                return null;
+            }
+
+            $row = $document->fields;
+            $rawPath = GLPI_DOC_DIR . '/' . (string) ($row['filepath'] ?? '');
             $fullPath = realpath($rawPath);
-            $docBase  = realpath(GLPI_DOC_DIR);
+            $docBase = realpath(GLPI_DOC_DIR);
     
             if ($fullPath === false || $docBase === false
                 || !str_starts_with($fullPath, $docBase . DIRECTORY_SEPARATOR)) {

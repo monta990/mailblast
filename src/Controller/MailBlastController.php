@@ -186,7 +186,7 @@ final class MailBlastController extends AbstractController
                 'csrf' => Session::getNewCSRFToken(),
             ]);
         } catch (\Throwable $e) {
-            Toolbox::logInFile(
+            \Toolbox::logInFile(
                 'mailblast',
                 sprintf("Report generation failed: %s\n", $e->getMessage()),
                 true

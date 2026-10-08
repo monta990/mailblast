@@ -6,6 +6,17 @@ Versioning follows Semantic Versioning.
 
 ---
 
+## [1.8.2] — 2026-10-07
+
+### Fixed
+
+- **Report error logging** — corrected `Toolbox::logInFile()` in `MailBlastController::report()` to use GLPI's global `\Toolbox` class from the plugin controller namespace.
+- **Translations** — completed missing Mail Blast strings in the Spanish (Mexico), French (France), and German catalogs, synchronized the compiled `.mo` files, and fixed the recent-history counter so `%count%` is replaced correctly in Twig.
+- **Document access control for inline images** — document-backed `docid` images now require GLPI's document READ/entity visibility checks before Mail Blast reads the file bytes. The existing filesystem path-traversal protection remains in place.
+- **Legacy footer sanitization** — footers loaded from configuration are sanitized before reaching the Twig `|raw` template, protecting footer values saved by older plugin versions; the configuration storage boundary also sanitizes new values as defense in depth.
+
+---
+
 ## [1.8.1] — 2026-08-25
 
 ### Fixed

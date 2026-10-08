@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mail Blast\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-02 00:00-0700\n"
-"PO-Revision-Date: 2026-05-02 00:00-0700\n"
+"POT-Creation-Date: 2026-10-07 18:00-0700\n"
+"PO-Revision-Date: 2026-10-07 18:00-0700\n"
 "Last-Translator: Edwin Elias Alvarez\n"
 "Language-Team: Spanish (Mexico)\n"
 "Language: es_MX\n"
@@ -452,7 +452,77 @@ msgid "Latest stable"
 msgstr "Última estable"
 msgid "Unavailable"
 msgstr "No disponible"
+msgid "You are using the latest stable version."
+msgstr "Estás usando la última versión estable."
 msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
 msgstr "La comprobación de versión de GitHub no está disponible actualmente. El plugin volverá a intentarlo automáticamente más tarde."
 
 
+msgid "Your installed version is newer than the latest stable release published on GitHub."
+msgstr "Tu versión instalada es más reciente que la última versión estable publicada en GitHub."
+
+msgid "Attachment %d is invalid."
+msgstr "El adjunto %d no es válido."
+
+msgid "Attachment %s is empty or invalid."
+msgstr "El adjunto %s está vacío o no es válido."
+
+msgid "Attachment %s contains invalid data."
+msgstr "El adjunto %s contiene datos no válidos."
+
+msgid "Attachment size limit exceeded."
+msgstr "Se superó el límite de tamaño de los adjuntos."
+
+msgid "Combined attachment and inline image size limit exceeded."
+msgstr "Se superó el límite de tamaño combinado de adjuntos e imágenes en línea."
+
+msgid "Combined attachment size limit exceeded."
+msgstr "Se superó el límite de tamaño combinado de los adjuntos."
+
+msgid "File type not allowed by GLPI: %s (%s)."
+msgstr "Tipo de archivo no permitido por GLPI: %s (%s)."
+
+msgid "History"
+msgstr "Historial"
+
+msgid "History limit"
+msgstr "Límite del historial"
+
+msgid "History limit must be between 10 and 100."
+msgstr "El límite del historial debe estar entre 10 y 100."
+
+msgid "Inline image %d is invalid."
+msgstr "La imagen en línea %d no es válida."
+
+msgid "Inline image %d contains invalid data."
+msgstr "La imagen en línea %d contiene datos no válidos."
+
+msgid "Inline image %d is not a valid image."
+msgstr "La imagen en línea %d no es una imagen válida."
+
+msgid "Invalid attachment data."
+msgstr "Datos de adjunto no válidos."
+
+msgid "Invalid report data."
+msgstr "Datos de informe no válidos."
+
+msgid "Invalid request method."
+msgstr "Método de solicitud no válido."
+
+msgid "Last %count% mass sends"
+msgstr "Últimos %count% envíos masivos"
+
+msgid "Number of recent mass sends to keep (10–100). Default: 10."
+msgstr "Número de envíos masivos recientes que se conservarán (10–100). Predeterminado: 10."
+
+msgid "Server error while processing the sending queue."
+msgstr "Error del servidor al procesar la cola de envío."
+
+msgid "The campaign payload is invalid or has been modified. Restart the send."
+msgstr "Los datos de la campaña no son válidos o han sido modificados. Reinicia el envío."
+
+msgid "The sending queue was not found or has expired."
+msgstr "No se encontró la cola de envío o ha caducado."
+
+msgid "Unknown action."
+msgstr "Acción desconocida."
