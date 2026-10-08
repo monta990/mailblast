@@ -152,7 +152,7 @@
     <div class="card mb-4">
       <div class="card-header fw-bold">
         <i class="ti ti-history me-1"></i>{{ __('Recent sends', 'mailblast') }}
-        <span class="text-muted fw-normal small ms-2">{{ __('Last %count% mass sends', 'mailblast', {'%count%': history_limit}) }}</span>
+        <span class="text-muted fw-normal small ms-2">{{ __('Last %count% mass sends', 'mailblast')|replace({'%count%': history_limit}) }}</span>
       </div>
       <div class="card-body p-0">
         {% if history is empty %}

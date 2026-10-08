@@ -5,9 +5,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mail Blast\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-02 00:00-0700\n"
-"PO-Revision-Date: 2026-05-02 00:00-0700\n"
-"Last-Translator: Automatically generated\n"
+"POT-Creation-Date: 2026-10-07 18:00-0700\n"
+"PO-Revision-Date: 2026-10-07 18:00-0700\n"
+"Last-Translator: Edwin Elias Alvarez\n"
 "Language-Team: French (France)\n"
 "Language: fr_FR\n"
 "MIME-Version: 1.0\n"
@@ -460,3 +460,69 @@ msgstr "La vérification de version GitHub est actuellement indisponible. Le plu
 
 msgid "Your installed version is newer than the latest stable release published on GitHub."
 msgstr "La version installée est plus récente que la dernière version stable publiée sur GitHub."
+
+msgid "Attachment %d is invalid."
+msgstr "La pièce jointe %d n’est pas valide."
+
+msgid "Attachment %s is empty or invalid."
+msgstr "La pièce jointe %s est vide ou n’est pas valide."
+
+msgid "Attachment %s contains invalid data."
+msgstr "La pièce jointe %s contient des données non valides."
+
+msgid "Attachment size limit exceeded."
+msgstr "La limite de taille des pièces jointes est dépassée."
+
+msgid "Combined attachment and inline image size limit exceeded."
+msgstr "La limite de taille combinée des pièces jointes et des images en ligne est dépassée."
+
+msgid "Combined attachment size limit exceeded."
+msgstr "La limite de taille combinée des pièces jointes est dépassée."
+
+msgid "File type not allowed by GLPI: %s (%s)."
+msgstr "Type de fichier non autorisé par GLPI : %s (%s)."
+
+msgid "History"
+msgstr "Historique"
+
+msgid "History limit"
+msgstr "Limite de l’historique"
+
+msgid "History limit must be between 10 and 100."
+msgstr "La limite de l’historique doit être comprise entre 10 et 100."
+
+msgid "Inline image %d is invalid."
+msgstr "L’image en ligne %d n’est pas valide."
+
+msgid "Inline image %d contains invalid data."
+msgstr "L’image en ligne %d contient des données non valides."
+
+msgid "Inline image %d is not a valid image."
+msgstr "L’image en ligne %d n’est pas une image valide."
+
+msgid "Invalid attachment data."
+msgstr "Données de pièce jointe non valides."
+
+msgid "Invalid report data."
+msgstr "Données de rapport non valides."
+
+msgid "Invalid request method."
+msgstr "Méthode de requête non valide."
+
+msgid "Last %count% mass sends"
+msgstr "Derniers %count% envois massifs"
+
+msgid "Number of recent mass sends to keep (10–100). Default: 10."
+msgstr "Nombre d’envois massifs récents à conserver (10–100). Par défaut : 10."
+
+msgid "Server error while processing the sending queue."
+msgstr "Erreur du serveur lors du traitement de la file d’envoi."
+
+msgid "The campaign payload is invalid or has been modified. Restart the send."
+msgstr "Les données de la campagne ne sont pas valides ou ont été modifiées. Redémarrez l’envoi."
+
+msgid "The sending queue was not found or has expired."
+msgstr "La file d’envoi est introuvable ou a expiré."
+
+msgid "Unknown action."
+msgstr "Action inconnue."

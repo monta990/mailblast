@@ -5,9 +5,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mail Blast\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-02 00:00-0700\n"
-"PO-Revision-Date: 2026-05-02 00:00-0700\n"
-"Last-Translator: Automatically generated\n"
+"POT-Creation-Date: 2026-10-07 18:00-0700\n"
+"PO-Revision-Date: 2026-10-07 18:00-0700\n"
+"Last-Translator: Edwin Elias Alvarez\n"
 "Language-Team: German (Germany)\n"
 "Language: de_DE\n"
 "MIME-Version: 1.0\n"
@@ -460,3 +460,69 @@ msgstr "Die GitHub-Versionsprüfung ist derzeit nicht verfügbar. Das Plugin ver
 
 msgid "Your installed version is newer than the latest stable release published on GitHub."
 msgstr "Die installierte Version ist neuer als die zuletzt auf GitHub veröffentlichte stabile Version."
+
+msgid "Attachment %d is invalid."
+msgstr "Der Anhang %d ist ungültig."
+
+msgid "Attachment %s is empty or invalid."
+msgstr "Der Anhang %s ist leer oder ungültig."
+
+msgid "Attachment %s contains invalid data."
+msgstr "Der Anhang %s enthält ungültige Daten."
+
+msgid "Attachment size limit exceeded."
+msgstr "Das Anhanggrößenlimit wurde überschritten."
+
+msgid "Combined attachment and inline image size limit exceeded."
+msgstr "Das kombinierte Größenlimit für Anhänge und Inline-Bilder wurde überschritten."
+
+msgid "Combined attachment size limit exceeded."
+msgstr "Das kombinierte Größenlimit für Anhänge wurde überschritten."
+
+msgid "File type not allowed by GLPI: %s (%s)."
+msgstr "Von GLPI nicht erlaubter Dateityp: %s (%s)."
+
+msgid "History"
+msgstr "Verlauf"
+
+msgid "History limit"
+msgstr "Verlaufslimit"
+
+msgid "History limit must be between 10 and 100."
+msgstr "Das Verlaufslimit muss zwischen 10 und 100 liegen."
+
+msgid "Inline image %d is invalid."
+msgstr "Das Inline-Bild %d ist ungültig."
+
+msgid "Inline image %d contains invalid data."
+msgstr "Das Inline-Bild %d enthält ungültige Daten."
+
+msgid "Inline image %d is not a valid image."
+msgstr "Das Inline-Bild %d ist kein gültiges Bild."
+
+msgid "Invalid attachment data."
+msgstr "Ungültige Anhangdaten."
+
+msgid "Invalid report data."
+msgstr "Ungültige Berichtsdaten."
+
+msgid "Invalid request method."
+msgstr "Ungültige Anfragemethode."
+
+msgid "Last %count% mass sends"
+msgstr "Letzte %count% Massenversendungen"
+
+msgid "Number of recent mass sends to keep (10–100). Default: 10."
+msgstr "Anzahl der letzten Massenversendungen, die gespeichert werden sollen (10–100). Standard: 10."
+
+msgid "Server error while processing the sending queue."
+msgstr "Serverfehler bei der Verarbeitung der Versandwarteschlange."
+
+msgid "The campaign payload is invalid or has been modified. Restart the send."
+msgstr "Die Kampagnendaten sind ungültig oder wurden geändert. Starten Sie den Versand neu."
+
+msgid "The sending queue was not found or has expired."
+msgstr "Die Versandwarteschlange wurde nicht gefunden oder ist abgelaufen."
+
+msgid "Unknown action."
+msgstr "Unbekannte Aktion."

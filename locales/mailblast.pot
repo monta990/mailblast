@@ -3,9 +3,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Mail Blast 1.7.4\n"
+"Project-Id-Version: Mail Blast 1.8.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-02 00:00-0700\n"
+"POT-Creation-Date: 2026-10-07 18:00-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -460,3 +460,69 @@ msgstr ""
 msgid "GitHub version check is currently unavailable. The plugin will retry automatically later."
 msgstr ""
 
+
+msgid "Attachment %d is invalid."
+msgstr ""
+
+msgid "Attachment %s is empty or invalid."
+msgstr ""
+
+msgid "Attachment %s contains invalid data."
+msgstr ""
+
+msgid "Attachment size limit exceeded."
+msgstr ""
+
+msgid "Combined attachment and inline image size limit exceeded."
+msgstr ""
+
+msgid "Combined attachment size limit exceeded."
+msgstr ""
+
+msgid "File type not allowed by GLPI: %s (%s)."
+msgstr ""
+
+msgid "History"
+msgstr ""
+
+msgid "History limit"
+msgstr ""
+
+msgid "History limit must be between 10 and 100."
+msgstr ""
+
+msgid "Inline image %d is invalid."
+msgstr ""
+
+msgid "Inline image %d contains invalid data."
+msgstr ""
+
+msgid "Inline image %d is not a valid image."
+msgstr ""
+
+msgid "Invalid attachment data."
+msgstr ""
+
+msgid "Invalid report data."
+msgstr ""
+
+msgid "Invalid request method."
+msgstr ""
+
+msgid "Last %count% mass sends"
+msgstr ""
+
+msgid "Number of recent mass sends to keep (10–100). Default: 10."
+msgstr ""
+
+msgid "Server error while processing the sending queue."
+msgstr ""
+
+msgid "The campaign payload is invalid or has been modified. Restart the send."
+msgstr ""
+
+msgid "The sending queue was not found or has expired."
+msgstr ""
+
+msgid "Unknown action."
+msgstr ""
