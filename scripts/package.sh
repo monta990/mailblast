@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUTPUT_DIR="$1"
+OUTPUT_DIR="${1:-}"
 if [[ -z "$OUTPUT_DIR" ]]; then
     OUTPUT_DIR="$ROOT/dist"
 fi
