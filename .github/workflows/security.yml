@@ -23,7 +23,6 @@ jobs:
   glpi-static-analysis:
     name: GLPI-aware validation — GLPI ${{ matrix.glpi_line }}
     if: github.event_name == 'pull_request'
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
