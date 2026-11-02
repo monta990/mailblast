@@ -23,9 +23,9 @@ $requiredCoreSymbols = [
         'function resetAllCaches(): bool',
     ],
     'src/Glpi/Routing/PluginRoutesLoader.php' => [
-        "sprintf('@%s:', $plugin_key)",
+        'sprintf(\'@%s:\', $plugin_key)',
         'addNamePrefix($name_prefix)',
-        "addPrefix(sprintf('/%s/%s/', $plugin_dir, $plugin_key))",
+        'addPrefix(sprintf(\'/%s/%s/\', $plugin_dir, $plugin_key))',
     ],
     'src/Html.php' => [
         'function initEditorSystem(', 'array $plugins_to_remove',
@@ -76,6 +76,7 @@ if (!is_file($autoloadFile)) {
         'Glpi\\Security\\Attribute\\SecurityStrategy',
         'Glpi\\Http\\Firewall',
         'Glpi\\Cache\\CacheManager',
+        'Glpi\\Routing\\PluginRoutesLoader',
         'Glpi\\Routing\\PluginRoutesLoader',
         'Symfony\\Component\\Routing\\Attribute\\Route',
         'Symfony\\Component\\HttpFoundation\\Request',
