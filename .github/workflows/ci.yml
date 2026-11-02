@@ -1,0 +1,120 @@
+name: Mail Blast CI
+
+on:
+  push:
+    branches:
+      - main
+      - "ci/**"
+      - "test/**"
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mailblast-ci-${ github.workflow }-${ github.ref }
+  cancel-in-progress: true
+
+jobs:
+  cli-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: "8.2"
+            experimental: false
+          - php: "8.3"
+            experimental: false
+          - php: "8.4"
+            experimental: false
+          - php: "8.5"
+            experimental: false
+          - php: "8.6"
+            experimental: true
+    continue-on-error: ${ matrix.experimental }
+    name: CLI and package checks — PHP ${ matrix.php }${ matrix.experimental && ' (experimental)' || '' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: ${ matrix.php }
+          extensions: fileinfo, mbstring, dom, intl, json, simplexml, xml, xmlwriter, zip
+          tools: phpunit:11.5
+          coverage: none
+
+      - name: Install release validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext zip unzip
+
+      - name: Show runtime
+        run: |
+          php --version
+          phpunit --version
+          node --version
+          msgfmt --version | head -n 1
+
+      - name: Validate required PHP extensions
+        run: |
+          php -r '$required = ["fileinfo", "mbstring", "dom", "intl", "json", "simplexml", "xml", "zip"]; foreach ($required as $extension) { if (!extension_loaded($extension)) { fwrite(STDERR, "Missing PHP extension: {$extension}" . PHP_EOL); exit(1); } }'
+
+      - name: PHP syntax
+        run: |
+          find setup.php hook.php src tests scripts .github -type f -name '*.php' -print0 | sort -z | xargs -0 -r -n1 php -l
+
+      - name: Check first-party JavaScript syntax
+        run: node --check js/mailblast_send.js
+
+      - name: Validate PSR-4 namespace and class mapping
+        run: php tests/check-psr4.php src 'GlpiPlugin\Mailblast'
+
+      - name: Validate release metadata and production architecture contracts
+        run: php tests/validate-release.php
+
+      - name: Run PHPUnit unit and contract tests
+        run: phpunit --configuration phpunit.xml
+
+      - name: Validate translation catalogs and placeholders
+        run: |
+          set -euo pipefail
+          for po in locales/*.po; do
+            msgfmt --check --check-format -o "$RUNNER_TEMP/$(basename "$po" .po).mo" "$po"
+          done
+          for mo in locales/*.mo; do
+            msgunfmt -o /dev/null "$mo"
+          done
+
+      - name: Build and validate the actual installation ZIP
+        run: |
+          set -euo pipefail
+          bash scripts/package.sh "$RUNNER_TEMP/mailblast-dist"
+          archive="$(find "$RUNNER_TEMP/mailblast-dist" -maxdepth 1 -type f -name 'mailblast-*.zip' -print -quit)"
+          test -n "$archive"
+          unzip -t "$archive"
+          if unzip -Z1 "$archive" | grep -Evq '^mailblast(/|$)'; then
+            echo "The archive contains a path outside mailblast/." >&2
+            exit 1
+          fi
+          if unzip -Z1 "$archive" | grep -Eq '^mailblast/(tests|scripts|\.github|vendor)(/|$)|^mailblast/(phpunit\.xml|composer\.(json|lock))$'; then
+            echo "Development-only files leaked into the installation ZIP." >&2
+            exit 1
+          fi
+          unzip -Z1 "$archive" | grep -qx 'mailblast/setup.php'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/hook.php'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/plugin.xml'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/src/Service/QueueService.php'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/templates/send.html.twig'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/locales/es_MX.mo'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/js/mailblast_send.js'
