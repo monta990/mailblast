@@ -101,6 +101,16 @@ jobs:
             --diff
 
 
+      - name: TwigCS full-template baseline (diagnostic)
+        continue-on-error: true
+        working-directory: glpi
+        run: |
+          vendor/bin/twigcs \
+            --ansi \
+            --no-interaction \
+            --ruleset='Glpi\\Tools\\GlpiTwigRuleset' \
+            plugins/mailblast/templates
+
       - name: PHPStan with GLPI source context (diagnostic baseline)
         continue-on-error: true
         working-directory: glpi
