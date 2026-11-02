@@ -107,6 +107,7 @@ jobs:
             --using-cache=no \
             --diff
 
+
       - name: PHPStan with GLPI source context (diagnostic baseline)
         continue-on-error: true
         working-directory: glpi
