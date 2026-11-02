@@ -76,6 +76,7 @@ if (!is_file($autoloadFile)) {
         'Glpi\\Security\\Attribute\\SecurityStrategy',
         'Glpi\\Http\\Firewall',
         'Glpi\\Cache\\CacheManager',
+        'Glpi\\Routing\\PluginRoutesLoader',
         'Symfony\\Component\\Routing\\Attribute\\Route',
         'Symfony\\Component\\HttpFoundation\\Request',
         'Symfony\\Component\\HttpFoundation\\JsonResponse',
@@ -104,6 +105,7 @@ if (!is_file($autoloadFile)) {
         $controllerReflection = new ReflectionClass('GlpiPlugin\\Mailblast\\Controller\\MailBlastController');
         $routeCount = 0;
         $securityCount = 0;
+        $routeNames = [];
         foreach ($controllerReflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             foreach ($method->getAttributes() as $attribute) {
                 $instance = $attribute->newInstance();
@@ -115,8 +117,15 @@ if (!is_file($autoloadFile)) {
                 }
             }
         }
-        if ($routeCount !== 4 || $securityCount !== 4) {
-            $errors[] = "Expected 4 protected controller routes; found {$routeCount} routes and {$securityCount} security attributes.";
+        sort($routeNames);
+        $expectedRouteNames = [
+            'mailblast_action',
+            'mailblast_configuration',
+            'mailblast_report',
+            'mailblast_send',
+        ];
+        if ($routeCount !== 4 || $securityCount !== 4 || $routeNames !== $expectedRouteNames) {
+            $errors[] = "Expected 4 protected Mail Blast routes; found {$routeCount} routes, {$securityCount} security attributes, and names: " . implode(', ', array_map('strval', $routeNames));
         }
     }
 }
