@@ -19,12 +19,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: mailblast-security-${{ github.workflow }-${{ github.ref }
+  group: mailblast-security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   glpi-static-analysis:
-    name: GLPI-aware validation — GLPI ${{ matrix.glpi }
+    name: GLPI-aware validation — GLPI ${{ matrix.glpi }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -45,18 +45,18 @@ jobs:
           persist-credentials: false
 
       # Use the exact latest stable patch releases verified for this review.
-      - name: Checkout GLPI ${{ matrix.glpi }
+      - name: Checkout GLPI ${{ matrix.glpi }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: glpi-project/glpi
-          ref: ${{ matrix.glpi }
+          ref: ${{ matrix.glpi }}
           path: glpi
           persist-credentials: false
 
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: ${{ matrix.php }
+          php-version: ${{ matrix.php }}
           extensions: bcmath, curl, dom, fileinfo, gd, intl, ldap, mbstring, mysqli, sodium, xml, xmlwriter, zip
           tools: composer:v2
           coverage: none
@@ -100,7 +100,7 @@ jobs:
       - name: PHP-CS-Fixer full-source baseline (diagnostic)
         continue-on-error: true
         env:
-          PLUGIN_SOURCE_ROOT: ${{ github.workspace }
+          PLUGIN_SOURCE_ROOT: ${{ github.workspace }}
         run: |
           glpi/vendor/bin/php-cs-fixer check \
             --config="$GITHUB_WORKSPACE/.github/php-cs-fixer-plugin.php" \
@@ -110,8 +110,8 @@ jobs:
       - name: Enforce PHP-CS-Fixer on changed PHP files
         if: github.event_name == 'pull_request'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }
-          PLUGIN_SOURCE_ROOT: ${{ github.workspace }
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PLUGIN_SOURCE_ROOT: ${{ github.workspace }}
         run: |
           set -euo pipefail
           mapfile -t changed_php < <(
@@ -142,7 +142,7 @@ jobs:
       - name: Enforce TwigCS on changed templates
         if: github.event_name == 'pull_request'
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         working-directory: glpi
         run: |
           set -euo pipefail
@@ -180,7 +180,7 @@ jobs:
             --output-format=console
 
   codeql:
-    name: CodeQL — ${{ matrix.language }
+    name: CodeQL — ${{ matrix.language }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -200,14 +200,14 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          languages: ${{ matrix.language }
+          languages: ${{ matrix.language }}
           build-mode: none
           queries: security-extended
 
       - name: Analyze with CodeQL
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          category: "/language:${{ matrix.language }"
+          category: "/language:${{ matrix.language }}"
 
   gitleaks:
     name: Detect exposed secrets
@@ -225,7 +225,7 @@ jobs:
       - name: Scan repository history
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
 
