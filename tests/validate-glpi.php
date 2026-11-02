@@ -77,7 +77,6 @@ if (!is_file($autoloadFile)) {
         'Glpi\\Http\\Firewall',
         'Glpi\\Cache\\CacheManager',
         'Glpi\\Routing\\PluginRoutesLoader',
-        'Glpi\\Routing\\PluginRoutesLoader',
         'Symfony\\Component\\Routing\\Attribute\\Route',
         'Symfony\\Component\\HttpFoundation\\Request',
         'Symfony\\Component\\HttpFoundation\\JsonResponse',
