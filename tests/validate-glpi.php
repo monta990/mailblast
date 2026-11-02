@@ -22,6 +22,11 @@ $requiredCoreSymbols = [
     'src/Glpi/Cache/CacheManager.php' => [
         'function resetAllCaches(): bool',
     ],
+    'src/Glpi/Routing/PluginRoutesLoader.php' => [
+        "sprintf('@%s:', $plugin_key)",
+        'addNamePrefix($name_prefix)',
+        "addPrefix(sprintf('/%s/%s/', $plugin_dir, $plugin_key))",
+    ],
     'src/Html.php' => [
         'function initEditorSystem(', 'array $plugins_to_remove',
     ],
