@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mailblast-ci-${ github.workflow }-${ github.ref }
+  group: mailblast-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,8 +37,8 @@ jobs:
             experimental: false
           - php: "8.6"
             experimental: true
-    continue-on-error: ${ matrix.experimental }
-    name: CLI and package checks — PHP ${ matrix.php }${ matrix.experimental && ' (experimental)' || '' }
+    continue-on-error: ${{ matrix.experimental }}
+    name: CLI and package checks — PHP ${{ matrix.php }}${{ matrix.experimental && ' (experimental)' || '' }}
 
     steps:
       - name: Checkout
@@ -49,7 +49,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: ${ matrix.php }
+          php-version: ${{ matrix.php }}
           extensions: fileinfo, mbstring, dom, intl, json, simplexml, xml, xmlwriter, zip
           tools: phpunit:11.5
           coverage: none
@@ -103,7 +103,8 @@ jobs:
           archive="$(find "$RUNNER_TEMP/mailblast-dist" -maxdepth 1 -type f -name 'mailblast-*.zip' -print -quit)"
           test -n "$archive"
           unzip -t "$archive"
-          if unzip -Z1 "$archive" | grep -Evq '^mailblast(/|$)'; then
+          unexpected_paths="$(unzip -Z1 "$archive" | grep -Ev '^mailblast(/|$)' || true)"
+          if [[ -n "$unexpected_paths" ]] '^mailblast(/|$)'; then
             echo "The archive contains a path outside mailblast/." >&2
             exit 1
           fi
