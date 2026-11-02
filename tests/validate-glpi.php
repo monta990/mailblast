@@ -111,6 +111,10 @@ if (!is_file($autoloadFile)) {
                 $instance = $attribute->newInstance();
                 if ($instance instanceof Symfony\Component\Routing\Attribute\Route) {
                     ++$routeCount;
+                    $routeNames[] = $instance->getName();
+                    if (!str_starts_with($instance->getPath(), '/')) {
+                        $errors[] = 'Plugin routes must use absolute paths before GLPI adds the plugin prefix.';
+                    }
                 }
                 if ($instance instanceof Glpi\Security\Attribute\SecurityStrategy) {
                     ++$securityCount;
