@@ -108,7 +108,6 @@ jobs:
             --diff
 
       - name: Enforce PHP-CS-Fixer on changed PHP files
-        if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PLUGIN_SOURCE_ROOT: ${{ github.workspace }}
@@ -116,7 +115,7 @@ jobs:
           set -euo pipefail
           mapfile -t changed_php < <(
             git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$GITHUB_SHA" \
-              | grep -E '^(setup\.php|hook\.php|src/.+\.php)$' || true
+              | grep -E '^(setup\\.php|hook\\.php|src/.+\\.php)$' || true
           )
           if [[ ${#changed_php[@]} -eq 0 ]]; then
             echo "No changed PHP files; style gate is not applicable."
@@ -136,11 +135,10 @@ jobs:
           vendor/bin/twigcs \
             --ansi \
             --no-interaction \
-            --ruleset='Glpi\Tools\GlpiTwigRuleset' \
+            --ruleset='Glpi\\Tools\\GlpiTwigRuleset' \
             plugins/mailblast/templates
 
       - name: Enforce TwigCS on changed templates
-        if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         working-directory: glpi
@@ -148,7 +146,7 @@ jobs:
           set -euo pipefail
           mapfile -t changed_twig < <(
             git -C "$GITHUB_WORKSPACE" diff --name-only --diff-filter=ACMR "$BASE_SHA" "$GITHUB_SHA" \
-              | grep -E '^templates/.+\.twig$' \
+              | grep -E '^templates/.+\\.twig$' \
               | sed 's#^#plugins/mailblast/#' || true
           )
           if [[ ${#changed_twig[@]} -eq 0 ]]; then
@@ -158,7 +156,7 @@ jobs:
           vendor/bin/twigcs \
             --ansi \
             --no-interaction \
-            --ruleset='Glpi\Tools\GlpiTwigRuleset' \
+            --ruleset='Glpi\\Tools\\GlpiTwigRuleset' \
             "${changed_twig[@]}"
 
       - name: PHPStan with GLPI source context (diagnostic baseline)
