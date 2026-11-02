@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - plugins/mailblast/src
+        - plugins/mailblast/setup.php
+        - plugins/mailblast/hook.php
+    excludePaths:
+        analyse:
+            - plugins/mailblast/src/Service/ViewService.php
+    treatPhpDocTypesAsCertain: false
