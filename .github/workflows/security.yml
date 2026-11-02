@@ -22,6 +22,7 @@ concurrency:
 jobs:
   glpi-static-analysis:
     name: GLPI-aware validation — GLPI ${{ matrix.glpi_line }}
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -179,16 +180,13 @@ jobs:
             --output-format=console
 
 
-name: Mail Blast Security Analysis
+---
+name: Mail Blast Trusted Security Analysis
 
 on:
   push:
     branches:
       - main
-      - "ci/**"
-      - "security/**"
-    tags:
-      - "1.*"
   schedule:
     - cron: "17 5 * * 1"
   workflow_dispatch:
@@ -197,7 +195,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mailblast-security-${{ github.workflow }}-${{ github.ref }}
+  group: mailblast-security-trusted-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
