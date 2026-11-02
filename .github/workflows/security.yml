@@ -173,9 +173,8 @@ jobs:
 
       - name: Psalm security and taint analysis (diagnostic baseline)
         continue-on-error: true
-        working-directory: glpi
         run: |
-          vendor/bin/psalm \
+          glpi/vendor/bin/psalm \
             --config="$GITHUB_WORKSPACE/.github/psalm-mailblast.xml" \
             --long-progress \
             --output-format=console
