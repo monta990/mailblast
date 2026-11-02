@@ -121,7 +121,7 @@ if (!str_contains($controller, '#[SecurityStrategy(Firewall::STRATEGY_AUTHENTICA
 if (substr_count($controller, "Session::checkRight('config', UPDATE)") < 4) {
     $errors[] = 'Every controller endpoint must retain the GLPI config/UPDATE permission check.';
 }
-if (!str_contains($action, "'queue_process' =>") || !str_contains($action, "'queue_init' =>")) {
+if (!str_contains($controller, "'queue_process' =>") || !str_contains($controller, "'queue_init' =>")) {
     $errors[] = 'The existing browser-driven queue actions were changed or removed.';
 }
 if (!str_contains($queue, "ConfigurationService::CONFIG_CONTEXT") || !str_contains($queue, "'payload_hash'")) {
