@@ -9,6 +9,7 @@ fi
 VERSION="$(sed -n "s/.*PLUGIN_MAILBLAST_VERSION', *'\\([^']*\\)'.*/\\1/p" "$ROOT/setup.php" | head -n 1)"
 
 mkdir -p "$OUTPUT_DIR"
+OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/mailblast"
