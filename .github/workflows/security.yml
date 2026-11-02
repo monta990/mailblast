@@ -1,13 +1,6 @@
 name: Mail Blast Security Analysis
 
 on:
-  push:
-    branches:
-      - main
-      - "ci/**"
-      - "security/**"
-    tags:
-      - "1.*"
   pull_request:
     branches:
       - main
