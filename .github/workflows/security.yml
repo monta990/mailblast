@@ -24,17 +24,19 @@ concurrency:
 
 jobs:
   glpi-static-analysis:
-    name: GLPI-aware validation — GLPI ${{ matrix.glpi }}
+    name: GLPI-aware validation — GLPI ${{ matrix.glpi_line }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - glpi: "11.0.12"
+          - glpi_branch: "11.0/bugfixes"
+            glpi_line: "11.x"
+            php: "8.2"
+          - glpi_branch: "12.0/bugfixes"
+            glpi_line: "12.x"
             php: "8.3"
-          - glpi: "12.0.1"
-            php: "8.5"
 
     steps:
       # PR source is inspected only in an unprivileged pull_request job.
@@ -44,12 +46,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Use the exact latest stable patch releases verified for this review.
-      - name: Checkout GLPI ${{ matrix.glpi }}
+      # Follow the maintained release branches so every run tests the latest 11.x/12.x fixes.
+      - name: Checkout GLPI ${{ matrix.glpi_line }} (maintenance branch)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: glpi-project/glpi
-          ref: ${{ matrix.glpi }}
+          ref: ${{ matrix.glpi_branch }}
           path: glpi
           persist-credentials: false
 
@@ -72,7 +74,7 @@ jobs:
             --no-scripts
 
       - name: Generate GLPI 12 font assets
-        if: matrix.glpi == '12.0.1'
+        if: matrix.glpi_line == '12.x'
         working-directory: glpi
         run: bash tools/build_fonts.sh
 
