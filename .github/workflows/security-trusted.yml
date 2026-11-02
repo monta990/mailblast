@@ -99,7 +99,7 @@ jobs:
             plugins/mailblast/hook.php \\
             plugins/mailblast/src
 
-deql:
+  codeql:
     name: CodeQL — ${{ matrix.language }}
     # Never analyze an untrusted PR head in the privileged security-events context.
     if: github.event_name != 'pull_request'
