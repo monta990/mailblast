@@ -54,6 +54,68 @@ foreach ($requiredCoreSymbols as $relative => $symbols) {
     }
 }
 
+$autoloadFile = rtrim($glpiRoot, DIRECTORY_SEPARATOR) . '/vendor/autoload.php';
+if (!is_file($autoloadFile)) {
+    $errors[] = 'GLPI Composer autoloader is missing.';
+} else {
+    $loader = require_once $autoloadFile;
+    if (is_object($loader) && method_exists($loader, 'addPsr4')) {
+        $loader->addPsr4(
+            'GlpiPlugin\\Mailblast\\',
+            rtrim($pluginRoot, DIRECTORY_SEPARATOR) . '/src'
+        );
+    }
+
+    $runtimeSymbols = [
+        'Glpi\\Controller\\AbstractController',
+        'Glpi\\Security\\Attribute\\SecurityStrategy',
+        'Glpi\\Http\\Firewall',
+        'Glpi\\Cache\\CacheManager',
+        'Symfony\\Component\\Routing\\Attribute\\Route',
+        'Symfony\\Component\\HttpFoundation\\Request',
+        'Symfony\\Component\\HttpFoundation\\JsonResponse',
+        'Symfony\\Component\\Mailer\\Transport',
+        'Symfony\\Component\\Mailer\\Transport\\TransportInterface',
+        'Symfony\\Component\\Mime\\Email',
+        'PhpOffice\\PhpSpreadsheet\\Spreadsheet',
+        'GlpiPlugin\\Mailblast\\Controller\\MailBlastController',
+        'GlpiPlugin\\Mailblast\\Service\\ActionService',
+        'GlpiPlugin\\Mailblast\\Service\\AttachmentService',
+        'GlpiPlugin\\Mailblast\\Service\\ConfigurationService',
+        'GlpiPlugin\\Mailblast\\Service\\ContentService',
+        'GlpiPlugin\\Mailblast\\Service\\MailService',
+        'GlpiPlugin\\Mailblast\\Service\\QueueService',
+        'GlpiPlugin\\Mailblast\\Service\\RecipientService',
+        'GlpiPlugin\\Mailblast\\Service\\ReportService',
+        'GlpiPlugin\\Mailblast\\Service\\ViewService',
+    ];
+    foreach ($runtimeSymbols as $symbol) {
+        if (!class_exists($symbol) && !interface_exists($symbol)) {
+            $errors[] = "GLPI runtime class/interface cannot be autoloaded: {$symbol}";
+        }
+    }
+
+    if (class_exists('GlpiPlugin\\Mailblast\\Controller\\MailBlastController')) {
+        $controllerReflection = new ReflectionClass('GlpiPlugin\\Mailblast\\Controller\\MailBlastController');
+        $routeCount = 0;
+        $securityCount = 0;
+        foreach ($controllerReflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            foreach ($method->getAttributes() as $attribute) {
+                $instance = $attribute->newInstance();
+                if ($instance instanceof Symfony\Component\Routing\Attribute\Route) {
+                    ++$routeCount;
+                }
+                if ($instance instanceof Glpi\Security\Attribute\SecurityStrategy) {
+                    ++$securityCount;
+                }
+            }
+        }
+        if ($routeCount !== 4 || $securityCount !== 4) {
+            $errors[] = "Expected 4 protected controller routes; found {$routeCount} routes and {$securityCount} security attributes.";
+        }
+    }
+}
+
 $pluginFiles = [
     'setup.php', 'hook.php', 'src/Controller/MailBlastController.php',
     'src/Service/ActionService.php', 'src/Service/AttachmentService.php',
