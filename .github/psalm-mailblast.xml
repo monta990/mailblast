@@ -6,8 +6,8 @@
     findUnusedBaselineEntry="false"
 >
     <projectFiles>
-        <directory name="src"/>
-        <file name="setup.php"/>
-        <file name="hook.php"/>
+        <directory name="../src"/>
+        <file name="../setup.php"/>
+        <file name="../hook.php"/>
     </projectFiles>
 </psalm>
