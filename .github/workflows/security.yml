@@ -108,7 +108,7 @@ jobs:
           vendor/bin/twigcs \
             --ansi \
             --no-interaction \
-            --ruleset='Glpi\\Tools\\GlpiTwigRuleset' \
+            --ruleset='Glpi\Tools\GlpiTwigRuleset' \
             plugins/mailblast/templates
 
       - name: PHPStan with GLPI source context (diagnostic baseline)
