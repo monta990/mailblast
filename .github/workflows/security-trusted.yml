@@ -66,11 +66,11 @@ jobs:
       - name: Install GLPI development analysis tools
         working-directory: glpi
         run: |
-          composer install \\
-            --no-interaction \\
-            --prefer-dist \\
-            --no-progress \\
-            --ignore-platform-req=php+ \\
+          composer install \
+            --no-interaction \
+            --prefer-dist \
+            --no-progress \
+            --ignore-platform-req=php+ \
             --no-scripts
 
       - name: Generate GLPI 12 font assets
@@ -92,11 +92,11 @@ jobs:
       - name: PHP lint with deprecated-syntax detection
         working-directory: glpi
         run: |
-          vendor/bin/parallel-lint \\
-            --show-deprecated \\
-            --colors \\
-            plugins/mailblast/setup.php \\
-            plugins/mailblast/hook.php \\
+          vendor/bin/parallel-lint \
+            --show-deprecated \
+            --colors \
+            plugins/mailblast/setup.php \
+            plugins/mailblast/hook.php \
             plugins/mailblast/src
 
   codeql:
