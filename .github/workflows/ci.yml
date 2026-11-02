@@ -104,7 +104,7 @@ jobs:
           test -n "$archive"
           unzip -t "$archive"
           unexpected_paths="$(unzip -Z1 "$archive" | grep -Ev '^mailblast(/|$)' || true)"
-          if [[ -n "$unexpected_paths" ]] '^mailblast(/|$)'; then
+          if [[ -n "$unexpected_paths" ]]; then
             echo "The archive contains a path outside mailblast/." >&2
             exit 1
           fi
