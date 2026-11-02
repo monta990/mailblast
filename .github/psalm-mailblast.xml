@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    findUnusedCode="false"
+    findUnusedBaselineEntry="false"
+>
+    <projectFiles>
+        <directory name="src"/>
+        <file name="setup.php"/>
+        <file name="hook.php"/>
+    </projectFiles>
+</psalm>
