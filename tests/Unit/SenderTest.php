@@ -45,6 +45,7 @@ final class SenderTest extends TestCase
         Config::$sender = ['email' => 'notifications@example.org', 'name' => 'Service desk'];
         Config::$sendersByEntity = [];
         Config::$askedEntity = null;
+        unset($_SESSION['glpiactive_entity']);
         $GLOBALS['CFG_GLPI'] = ['admin_email' => 'admin.person@example.org', 'smtp_sender' => 'bounce@example.org'];
     }
 
@@ -87,6 +88,34 @@ final class SenderTest extends TestCase
         self::assertSame(7, Config::$askedEntity);
         self::assertSame('entity-seven@example.org', $from['email']);
         self::assertSame('Entity seven', $from['name']);
+    }
+
+    public function testActiveSessionEntityIsUsedWhenNoEntityIsPassed(): void
+    {
+        $_SESSION['glpiactive_entity'] = 7;
+        Config::$sendersByEntity[7] = [
+            'email' => 'active-entity@example.org',
+            'name' => 'Active entity',
+        ];
+
+        $from = (new MailService())->resolveSender();
+
+        self::assertSame(7, Config::$askedEntity);
+        self::assertSame('active-entity@example.org', $from['email']);
+    }
+
+    public function testExplicitEntityTakesPrecedenceOverActiveSessionEntity(): void
+    {
+        $_SESSION['glpiactive_entity'] = 7;
+        Config::$sendersByEntity[8] = [
+            'email' => 'explicit-entity@example.org',
+            'name' => 'Explicit entity',
+        ];
+
+        $from = (new MailService())->resolveSender('', '', 8);
+
+        self::assertSame(8, Config::$askedEntity);
+        self::assertSame('explicit-entity@example.org', $from['email']);
     }
 
     public function testNoUsableSenderGivesEmptyIdentity(): void
