@@ -6,18 +6,6 @@ use UserEmail;
 
 final class ActionService
 {
-    /** The GLPI entity the user is working in, for its configured sender. */
-    private static function activeEntity(): ?int
-    {
-        $entityId = $_SESSION['glpiactive_entity'] ?? null;
-        if (!is_int($entityId) && !(is_string($entityId) && ctype_digit($entityId))) {
-            return null;
-        }
-
-        $entityId = (int) $entityId;
-        return $entityId >= 0 ? $entityId : null;
-    }
-
     public function countRecipients(string $filterType, array $filterIds): int
     {
         $filterType = preg_replace('/[^a-z_]/', '', $filterType) ?: 'all';
@@ -71,7 +59,7 @@ final class ActionService
         $sent = 0;
         $errors = [];
         $mailService = new MailService();
-        $entityId = self::activeEntity();
+        $entityId = $mailService->resolveEntityId();
         $from = $mailService->resolveSender('', '', $entityId);
         foreach ($testEmails as $email) {
             $result = $mailService->sendMails(
@@ -120,8 +108,10 @@ final class ActionService
             return ['ok' => false, 'error' => implode(' ', $attachmentValidation['errors'])];
         }
         $tempAttachments = $attachmentService->decodeTemporaryAttachments($attachments, 'mb_qi_');
-        // From: GLPI's notification sender for the active entity.
-        $from = (new MailService())->resolveSender('', '', self::activeEntity());
+        // Resolve the active entity and its notification sender centrally.
+        $mailService = new MailService();
+        $entityId = $mailService->resolveEntityId();
+        $from = $mailService->resolveSender('', '', $entityId);
         try {
             return (new QueueService())->initQueue(
                 $subject,
@@ -132,7 +122,7 @@ final class ActionService
                 $replyToUserId,
                 $from['email'],
                 $from['name'],
-                self::activeEntity()
+                $entityId
             );
         } finally {
             $attachmentService->cleanupTemporaryAttachments($tempAttachments);
@@ -160,7 +150,7 @@ final class ActionService
             max(0, $offset),
             (new ConfigurationService())->getBatchSize(),
             $inlineImages,
-            self::activeEntity()
+            (new MailService())->resolveEntityId()
         );
 
         $ok = empty($result['queue_error']);
