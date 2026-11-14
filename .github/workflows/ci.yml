@@ -55,6 +55,8 @@ jobs:
           tools: phpunit:11.5
           coverage: none
 
+      # Install into runner temp only: the plugin does not ship Symfony dependencies.
+      # These tests exercise real MIME headers and the derived SMTP envelope.
       - name: Install Symfony Mailer test dependencies
         run: |
           mkdir -p "$RUNNER_TEMP/mailblast-test-deps"
