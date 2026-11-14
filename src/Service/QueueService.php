@@ -231,6 +231,23 @@ final class QueueService
                         'error_list' => [__('Combined attachment and inline image size limit exceeded.', 'mailblast')], 'sent_list' => [], 'queue_error' => true];
             }
 
+            // Resolve once before querying recipients. This also protects legacy
+            // queues: if their entity has no configured sender, nothing is sent.
+            $resolvedSender = (new MailService())->resolveSender($fromEmail, $fromName, $queueEntityId);
+            if ($resolvedSender['email'] === '') {
+                return [
+                    'sent' => 0,
+                    'errors' => 0,
+                    'done' => true,
+                    'next_offset' => $offset,
+                    'error_list' => [__('No valid sender email is configured in GLPI notifications.', 'mailblast')],
+                    'sent_list' => [],
+                    'queue_error' => true,
+                ];
+            }
+            $fromEmail = $resolvedSender['email'];
+            $fromName = $resolvedSender['name'];
+
             $qWhere = ['ue.is_default' => 1, 'u.is_deleted' => 0, 'u.is_active' => 1, 'NOT' => ['ue.email' => '']];
             $qJoin  = ['glpi_users AS u' => ['ON' => ['ue' => 'users_id', 'u' => 'id']]];
     
