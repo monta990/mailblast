@@ -27,9 +27,14 @@ final class QueueService
             string $fromName      = '',
             ?int   $entityId       = null
         ): array {
+            // Resolve the entity once. New queues retain it so later entity
+            // switches cannot change the sender while the campaign is running.
+            $mailService = new MailService();
+            $entityId = $mailService->resolveEntityId($entityId);
+
             // From: is the explicit sender or GLPI's notification sender, never
             // the "Reply to" user. Refuse to queue a send nobody can sign.
-            $from = (new MailService())->resolveSender($fromEmail, $fromName, $entityId);
+            $from = $mailService->resolveSender($fromEmail, $fromName, $entityId);
             if ($from['email'] === '') {
                 return ['ok' => false, 'error' => __('No valid sender email is configured in GLPI notifications.', 'mailblast')];
             }
@@ -144,7 +149,7 @@ final class QueueService
             // change the sender. Legacy queues use the active entity of the caller.
             $queueEntityId = array_key_exists('entity_id', $job)
                 ? ($job['entity_id'] === null ? null : (int) $job['entity_id'])
-                : $entityId;
+                : (new MailService())->resolveEntityId($entityId);
             $replyToEmail = (string) ($job['reply_to_email'] ?? '');
             $replyToName  = (string) ($job['reply_to_name']  ?? '');
             // Campaign content is intentionally supplied by the browser on every
