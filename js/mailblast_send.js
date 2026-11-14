@@ -300,7 +300,7 @@
 
       var msg;
       if (replyEmail) {
-        msg = (i18n.senderPreviewReply || 'This send will use %s as both the From and Reply-To address.').replace('%s', replyEmail);
+        msg = (i18n.senderPreviewReply || 'Replies will go to %s; the From address stays the GLPI notification sender.').replace('%s', replyEmail);
       } else {
         msg = i18n.senderPreviewDefault || 'This send will use the default GLPI configuration for both From and replies.';
       }

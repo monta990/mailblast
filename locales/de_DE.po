@@ -419,8 +419,8 @@ msgstr "Standard (keine Überschreibung)"
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
 msgstr "Antworten der Empfänger werden an dieses Postfach zugestellt statt an die Absendeadresse."
 
-msgid "This send will use %s as both the From and Reply-To address."
-msgstr "Dieser Versand verwendet %s sowohl als Absender- (From) als auch als Antwortadresse (Reply-To)."
+msgid "Replies will go to %s; the From address stays the GLPI notification sender."
+msgstr "Antworten gehen an %s; als Absender (From) bleibt der GLPI-Benachrichtigungsabsender."
 
 msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
 msgstr "Dieser Versand verwendet %s als Absenderadresse (From). Antworten verwenden die GLPI-Standardkonfiguration."
@@ -526,3 +526,6 @@ msgstr "Die Versandwarteschlange wurde nicht gefunden oder ist abgelaufen."
 
 msgid "Unknown action."
 msgstr "Unbekannte Aktion."
+
+msgid "No valid sender email is configured in GLPI notifications."
+msgstr "In den GLPI-Benachrichtigungen ist keine gültige Absenderadresse konfiguriert."

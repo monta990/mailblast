@@ -13,6 +13,49 @@ use GlpiPlugin\Mailblast\Service\RecipientService;
 
 final class MailService
 {
+    /**
+     * The From: identity of a Mail Blast message.
+     *
+     * An explicit, valid $fromEmail wins (callers such as API bridges pass the
+     * sender they resolved for an entity). Otherwise GLPI's own notification
+     * sender is used — Config::getEmailSender(): "from_email", then
+     * "admin_email" — exactly as GLPI does for its notifications.
+     *
+     * A "Reply to" user never becomes the From: address: sending under a
+     * personal address through GLPI's SMTP account is spoofing for most mail
+     * servers (SPF/DMARC, sender/login mismatch). That user goes to Reply-To:.
+     *
+     * @return array{email:string,name:string} email '' = no usable sender
+     */
+    public function resolveSender(string $fromEmail = '', string $fromName = '', ?int $entityId = null): array
+    {
+        $fromEmail = trim($fromEmail);
+        if ($fromEmail !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+            return ['email' => $fromEmail, 'name' => self::headerSafe($fromName)];
+        }
+
+        $sender = [];
+        try {
+            if (class_exists('\Config') && method_exists('\Config', 'getEmailSender')) {
+                $sender = (array) @\Config::getEmailSender($entityId);
+            }
+        } catch (\Throwable $e) {
+            $sender = [];
+        }
+        $email = trim((string) ($sender['email'] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['email' => '', 'name' => ''];
+        }
+
+        return ['email' => $email, 'name' => self::headerSafe((string) ($sender['name'] ?? ''))];
+    }
+
+    /** A display name safe for a mail header: no control characters. */
+    private static function headerSafe(string $name): string
+    {
+        return trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $name));
+    }
+
     public function sendSymfonyEmail(
             \Symfony\Component\Mailer\Transport\TransportInterface $transport,
             string $toEmail,
@@ -32,36 +75,26 @@ final class MailService
             try {
                 $email = new \Symfony\Component\Mime\Email();
     
-                // From address — same config GLPI reads for notifications
-                $fromAddr = trim((string) ($CFG_GLPI['admin_email']      ?? ''));
-                $fromName = trim((string) ($CFG_GLPI['admin_email_name'] ?? ''));
-                if ($fromAddr !== '' && filter_var($fromAddr, FILTER_VALIDATE_EMAIL)) {
-                    $email->from(new \Symfony\Component\Mime\Address($fromAddr, $fromName));
+                // From: the caller's explicit sender, else GLPI's notification
+                // sender (never a user's address). No sender = nothing leaves.
+                $from = $this->resolveSender($fromOverride, $fromNameOverride);
+                if ($from['email'] === '') {
+                    throw new \RuntimeException(
+                        'No valid sender: configure the administrator / sender email in Setup > Notifications.'
+                    );
                 }
-    
-                // Override From when a "Reply to" user was selected — the same
-                // mailbox is used for both, so replies land where recipients
-                // expect. Empty when no Reply to user is selected.
-                if ($fromOverride !== '' && filter_var($fromOverride, FILTER_VALIDATE_EMAIL)) {
-                    $email->from(new \Symfony\Component\Mime\Address($fromOverride, $fromNameOverride ?: $fromOverride));
+                $email->from(new \Symfony\Component\Mime\Address($from['email'], $from['name']));
+
+                // Envelope sender (smtp_sender), as GLPIMailer sets it.
+                $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
+                if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
+                    $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
                 }
-    
-                // Envelope sender (smtp_sender), if configured — only applied when
-                // no From override is active. Setting an explicit Sender: header
-                // that differs from From: makes Outlook (and other clients) show
-                // "sender@x.com on behalf of override@x.com", which defeats the
-                // purpose of the From override. When From is overridden, the
-                // envelope sender simply follows the From address instead.
-                if ($fromOverride === '') {
-                    $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
-                    if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
-                        $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
-                    }
-                }
-    
-                // Reply-To override — when set, replies from the recipient land in
-                // this mailbox regardless of which address appears in From:.
+
+                // Reply-To — the selected "Reply to" user: replies land in this
+                // mailbox while From: stays GLPI's sender.
                 if ($replyToEmail !== '' && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+                    $replyToName = self::headerSafe($replyToName);
                     $email->replyTo(new \Symfony\Component\Mime\Address($replyToEmail, $replyToName ?: $replyToEmail));
                 }
     
@@ -118,7 +151,9 @@ final class MailService
             array  $attachments   = [],
             bool   $testMode      = false,
             string $testEmail     = '',
-            int    $replyToUserId = 0
+            int    $replyToUserId = 0,
+            string $fromEmail     = '',
+            string $fromName      = ''
         ): array {
             $attachmentService = new AttachmentService();
             $inlineResult = $attachmentService->extractInlineImages($htmlBody);
@@ -147,10 +182,14 @@ final class MailService
     
             $replyTo = (new RecipientService())->resolveUserEmail($replyToUserId);
     
-            // Same priority rule as the mass-send queue: when a "Reply to" user
-            // is selected, it is used for From: as well.
-            $fromOverride     = $replyTo['email'];
-            $fromNameOverride = $replyTo['name'];
+            // Same rule as the mass-send queue: From: is the explicit sender or
+            // GLPI's; the "Reply to" user only goes to Reply-To:.
+            $from = $this->resolveSender($fromEmail, $fromName);
+            if ($from['email'] === '') {
+                return ['sent' => 0, 'errors' => [__('No valid sender email is configured in GLPI notifications.', 'mailblast')], 'total' => count($recipients)];
+            }
+            $fromOverride     = $from['email'];
+            $fromNameOverride = $from['name'];
     
             $sent   = 0;
             $errors = [];

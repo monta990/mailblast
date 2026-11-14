@@ -419,8 +419,8 @@ msgstr "Par défaut (aucune substitution)"
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
 msgstr "Les réponses des destinataires seront livrées à cette boîte de réception au lieu de l'adresse d'envoi."
 
-msgid "This send will use %s as both the From and Reply-To address."
-msgstr "Cet envoi utilisera %s comme adresse d'expéditeur (From) et de réponse (Reply-To)."
+msgid "Replies will go to %s; the From address stays the GLPI notification sender."
+msgstr "Les réponses iront à %s ; l'expéditeur (From) reste celui des notifications GLPI."
 
 msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
 msgstr "Cet envoi utilisera %s comme adresse d'expéditeur (From). Les réponses utiliseront la configuration GLPI par défaut."
@@ -526,3 +526,6 @@ msgstr "La file d’envoi est introuvable ou a expiré."
 
 msgid "Unknown action."
 msgstr "Action inconnue."
+
+msgid "No valid sender email is configured in GLPI notifications."
+msgstr "Aucune adresse d'expéditeur valide n'est configurée dans les notifications GLPI."
