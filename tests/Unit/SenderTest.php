@@ -234,7 +234,7 @@ final class SenderTest extends TestCase
         self::assertSame('notifications@example.org', $t->last->getFrom()[0]->getAddress());
         self::assertSame('agent@example.org', $t->last->getReplyTo()[0]->getAddress());
         self::assertSame('bounce@example.org', $t->last->getSender()?->getAddress());
-        $envelope = \\Symfony\\Component\\Mailer\\Envelope::create($t->last);
+        $envelope = \Symfony\Component\Mailer\Envelope::create($t->last);
         self::assertSame('bounce@example.org', $envelope->getSender()->getAddress());
     }
 
@@ -264,6 +264,21 @@ final class SenderTest extends TestCase
         self::assertNull($err);
         self::assertSame('notifications@example.org', $t->last->getFrom()[0]->getAddress());
         self::assertSame([], $t->last->getReplyTo());
+    }
+
+    public function testInvalidSmtpSenderFallsBackToFromForTheEnvelope(): void
+    {
+        if (!$this->requireSymfonyMime()) {
+            self::markTestSkipped('symfony/mime not found: set GLPI_ROOT to a GLPI install.');
+        }
+
+        $GLOBALS['CFG_GLPI']['smtp_sender'] = 'invalid-sender';
+        [$t, $err] = $this->sendThroughCapture('', '', '', '');
+
+        self::assertNull($err);
+        self::assertNull($t->last->getSender());
+        $envelope = \Symfony\Component\Mailer\Envelope::create($t->last);
+        self::assertSame('notifications@example.org', $envelope->getSender()->getAddress());
     }
 
     public function testMessageIsNotSentWithoutSender(): void
