@@ -1,6 +1,9 @@
 name: Mail Blast Security Analysis
 
 on:
+  push:
+    branches:
+      - "fix/**"
   pull_request:
     branches:
       - main
@@ -15,7 +18,7 @@ concurrency:
 jobs:
   glpi-static-analysis:
     name: GLPI-aware validation — GLPI ${{ matrix.glpi_line }}
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -30,7 +33,7 @@ jobs:
             php: "8.3"
 
     steps:
-      # PR source is inspected only in an unprivileged pull_request job.
+      # Branch and PR source are inspected only in this unprivileged read-only job.
       - name: Checkout plugin source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
