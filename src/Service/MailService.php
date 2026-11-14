@@ -57,7 +57,7 @@ final class MailService
         $sender = [];
         try {
             if (class_exists('\Config') && method_exists('\Config', 'getEmailSender')) {
-                $sender = (array) @\Config::getEmailSender($entityId);
+                $sender = @\Config::getEmailSender($entityId);
             }
         } catch (\Throwable $e) {
             $sender = [];
