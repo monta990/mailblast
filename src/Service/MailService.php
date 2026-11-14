@@ -68,7 +68,8 @@ final class MailService
             string $fromOverride     = '',
             string $fromNameOverride = '',
             string $replyToEmail     = '',
-            string $replyToName      = ''
+            string $replyToName      = '',
+            ?int   $entityId          = null
         ): ?string {
             global $CFG_GLPI;
     
@@ -77,7 +78,7 @@ final class MailService
     
                 // From: the caller's explicit sender, else GLPI's notification
                 // sender (never a user's address). No sender = nothing leaves.
-                $from = $this->resolveSender($fromOverride, $fromNameOverride);
+                $from = $this->resolveSender($fromOverride, $fromNameOverride, $entityId);
                 if ($from['email'] === '') {
                     throw new \RuntimeException(
                         'No valid sender: configure the administrator / sender email in Setup > Notifications.'
@@ -85,7 +86,8 @@ final class MailService
                 }
                 $email->from(new \Symfony\Component\Mime\Address($from['email'], $from['name']));
 
-                // Envelope sender (smtp_sender), as GLPIMailer sets it.
+                // Symfony uses the Sender header when deriving the SMTP envelope
+                // (MAIL FROM). Keep this aligned with GLPI's configured smtp_sender.
                 $smtpSender = trim((string) ($CFG_GLPI['smtp_sender'] ?? ''));
                 if ($smtpSender !== '' && filter_var($smtpSender, FILTER_VALIDATE_EMAIL)) {
                     $email->sender(new \Symfony\Component\Mime\Address($smtpSender));
@@ -153,7 +155,8 @@ final class MailService
             string $testEmail     = '',
             int    $replyToUserId = 0,
             string $fromEmail     = '',
-            string $fromName      = ''
+            string $fromName      = '',
+            ?int   $entityId       = null
         ): array {
             $attachmentService = new AttachmentService();
             $inlineResult = $attachmentService->extractInlineImages($htmlBody);
@@ -184,7 +187,7 @@ final class MailService
     
             // Same rule as the mass-send queue: From: is the explicit sender or
             // GLPI's; the "Reply to" user only goes to Reply-To:.
-            $from = $this->resolveSender($fromEmail, $fromName);
+            $from = $this->resolveSender($fromEmail, $fromName, $entityId);
             if ($from['email'] === '') {
                 return ['sent' => 0, 'errors' => [__('No valid sender email is configured in GLPI notifications.', 'mailblast')], 'total' => count($recipients)];
             }
@@ -217,7 +220,7 @@ final class MailService
     
                 $err = $this->sendSymfonyEmail(
                     $transport, $toEmail, $toName, $subject, $fullHtml, $plainText, $attPaths, $inlineImages,
-                    $fromOverride, $fromNameOverride, $replyTo['email'], $replyTo['name']
+                    $fromOverride, $fromNameOverride, $replyTo['email'], $replyTo['name'], $entityId
                 );
     
                 if ($err === null) {
