@@ -8,6 +8,8 @@ Versioning follows Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.8.3] — 2026-11-14
+
 ### Changed
 
 - **The From: address is always GLPI's notification sender** (`Config::getEmailSender()`: the configured sender email, then the administrator email), for test sends and mass sends alike. Previously the administrator email was used, and a selected "Reply to" user became the From: address too: sending under a personal address through GLPI's SMTP account is rejected or flagged as spoofing by many mail servers (SPF/DMARC, sender/login mismatch). The selected user now only receives replies (Reply-To:).
@@ -21,6 +23,17 @@ Versioning follows Semantic Versioning.
 - **`fromEmail` / `fromName` parameters** on `QueueService::initQueue()` and `MailService::sendMails()`, plus `MailService::resolveSender()`, so that an integration (for example an API bridge) can pass the sender it resolved for an entity. An invalid address is ignored and GLPI's sender applies; control characters are stripped from display names.
 
 ---
+
+
+### Validation
+
+- Added real Symfony Mailer test coverage for MIME `From`, `Reply-To`, and `Sender` headers and the derived SMTP envelope sender.
+- CI now installs Symfony Mailer only in the runner's temporary test environment; no third-party runtime dependency is bundled with the plugin.
+- Verified PHP 8.2–8.6, GLPI 11 and GLPI 12 compatibility checks, PSR-4 mapping, translation catalogs, and the installation ZIP build.
+
+### Acknowledgements
+
+- Thank you to **[@FathiBenNasr](https://github.com/FathiBenNasr)** for opening the original sender-identity PR and contributing the initial From/Reply-To separation. The contribution was retained and extended in this release.
 
 ## [1.8.2] — 2026-10-07
 
