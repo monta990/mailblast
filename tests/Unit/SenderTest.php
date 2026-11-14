@@ -11,12 +11,16 @@ if (!class_exists('Config', false)) {
     {
         /** @var array{email:?string,name:?string} */
         public static array $sender = ['email' => null, 'name' => null];
+        /** @var array<int, array{email:?string,name:?string}> */
+        public static array $sendersByEntity = [];
         public static ?int $askedEntity = null;
 
         public static function getEmailSender(?int $entities_id = null, bool $no_reply = false): array
         {
             self::$askedEntity = $entities_id;
-            return self::$sender;
+            return $entities_id !== null && isset(self::$sendersByEntity[$entities_id])
+                ? self::$sendersByEntity[$entities_id]
+                : self::$sender;
         }
     }
 }
@@ -39,6 +43,7 @@ final class SenderTest extends TestCase
     protected function setUp(): void
     {
         Config::$sender = ['email' => 'notifications@example.org', 'name' => 'Service desk'];
+        Config::$sendersByEntity = [];
         Config::$askedEntity = null;
         $GLOBALS['CFG_GLPI'] = ['admin_email' => 'admin.person@example.org', 'smtp_sender' => 'bounce@example.org'];
     }
@@ -70,10 +75,18 @@ final class SenderTest extends TestCase
         self::assertStringNotContainsString("\r", $from['name']);
     }
 
-    public function testEntityIsPassedToGlpi(): void
+    public function testEntitySpecificNotificationSenderIsResolved(): void
     {
-        (new MailService())->resolveSender('', '', 7);
+        Config::$sendersByEntity[7] = [
+            'email' => 'entity-seven@example.org',
+            'name' => 'Entity seven',
+        ];
+
+        $from = (new MailService())->resolveSender('', '', 7);
+
         self::assertSame(7, Config::$askedEntity);
+        self::assertSame('entity-seven@example.org', $from['email']);
+        self::assertSame('Entity seven', $from['name']);
     }
 
     public function testNoUsableSenderGivesEmptyIdentity(): void
@@ -111,11 +124,24 @@ final class SenderTest extends TestCase
             );
             self::assertContains('fromEmail', $names, "$class::$method");
             self::assertContains('fromName', $names, "$class::$method");
+            self::assertContains('entityId', $names, "$class::$method");
         }
+
+        $batchParameters = array_map(
+            static fn(ReflectionParameter $p): string => $p->getName(),
+            (new ReflectionMethod(QueueService::class, 'processBatch'))->getParameters()
+        );
+        self::assertContains('entityId', $batchParameters);
     }
 
     /** @return array{0:object,1:?string} capturing transport and send result */
-    private function sendThroughCapture(string $from, string $fromName, string $replyTo, string $replyToName): array
+    private function sendThroughCapture(
+        string $from,
+        string $fromName,
+        string $replyTo,
+        string $replyToName,
+        ?int $entityId = null
+    ): array
     {
         $transport = new class implements \Symfony\Component\Mailer\Transport\TransportInterface {
             public ?\Symfony\Component\Mime\Email $last = null;
@@ -128,7 +154,7 @@ final class SenderTest extends TestCase
         };
         $err = (new MailService())->sendSymfonyEmail(
             $transport, 'to@example.org', 'To', 'Subject', '<p>Hi</p>', 'Hi', [], [],
-            $from, $fromName, $replyTo, $replyToName
+            $from, $fromName, $replyTo, $replyToName, $entityId
         );
 
         return [$transport, $err];
@@ -179,6 +205,25 @@ final class SenderTest extends TestCase
         self::assertSame('notifications@example.org', $t->last->getFrom()[0]->getAddress());
         self::assertSame('agent@example.org', $t->last->getReplyTo()[0]->getAddress());
         self::assertSame('bounce@example.org', $t->last->getSender()?->getAddress());
+        $envelope = \\Symfony\\Component\\Mailer\\Envelope::create($t->last);
+        self::assertSame('bounce@example.org', $envelope->getSender()->getAddress());
+    }
+
+    public function testMessageUsesTheConfiguredSenderForItsEntity(): void
+    {
+        if (!$this->requireSymfonyMime()) {
+            self::markTestSkipped('symfony/mime not found: set GLPI_ROOT to a GLPI install.');
+        }
+
+        Config::$sendersByEntity[7] = [
+            'email' => 'entity-seven@example.org',
+            'name' => 'Entity seven',
+        ];
+        [$t, $err] = $this->sendThroughCapture('', '', '', '', 7);
+
+        self::assertNull($err);
+        self::assertSame(7, Config::$askedEntity);
+        self::assertSame('entity-seven@example.org', $t->last->getFrom()[0]->getAddress());
     }
 
     public function testMessageWithoutExplicitSenderUsesGlpiSenderNotAdminEmail(): void
