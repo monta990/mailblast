@@ -14,6 +14,25 @@ use GlpiPlugin\Mailblast\Service\RecipientService;
 final class MailService
 {
     /**
+     * Resolve an explicitly supplied entity, or use the current GLPI session
+     * entity. A null result intentionally means the global GLPI configuration.
+     */
+    public function resolveEntityId(?int $entityId = null): ?int
+    {
+        if ($entityId !== null) {
+            return $entityId >= 0 ? $entityId : null;
+        }
+
+        $activeEntity = $_SESSION['glpiactive_entity'] ?? null;
+        if (!is_int($activeEntity) && !(is_string($activeEntity) && ctype_digit($activeEntity))) {
+            return null;
+        }
+
+        $activeEntity = (int) $activeEntity;
+        return $activeEntity >= 0 ? $activeEntity : null;
+    }
+
+    /**
      * The From: identity of a Mail Blast message.
      *
      * An explicit, valid $fromEmail wins (callers such as API bridges pass the
@@ -29,6 +48,7 @@ final class MailService
      */
     public function resolveSender(string $fromEmail = '', string $fromName = '', ?int $entityId = null): array
     {
+        $entityId = $this->resolveEntityId($entityId);
         $fromEmail = trim($fromEmail);
         if ($fromEmail !== '' && filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
             return ['email' => $fromEmail, 'name' => self::headerSafe($fromName)];
@@ -185,6 +205,9 @@ final class MailService
     
             $replyTo = (new RecipientService())->resolveUserEmail($replyToUserId);
     
+            // Resolve once so all messages in this request use the same entity.
+            $entityId = $this->resolveEntityId($entityId);
+
             // Same rule as the mass-send queue: From: is the explicit sender or
             // GLPI's; the "Reply to" user only goes to Reply-To:.
             $from = $this->resolveSender($fromEmail, $fromName, $entityId);
