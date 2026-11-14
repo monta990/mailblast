@@ -11,9 +11,10 @@ Versioning follows Semantic Versioning.
 ### Changed
 
 - **The From: address is always GLPI's notification sender** (`Config::getEmailSender()`: the configured sender email, then the administrator email), for test sends and mass sends alike. Previously the administrator email was used, and a selected "Reply to" user became the From: address too: sending under a personal address through GLPI's SMTP account is rejected or flagged as spoofing by many mail servers (SPF/DMARC, sender/login mismatch). The selected user now only receives replies (Reply-To:).
-- **The envelope sender** (`smtp_sender`) is always applied, as GLPI's own mailer does.
+- **The SMTP envelope sender** uses the configured `smtp_sender` when valid. Symfony derives the SMTP `MAIL FROM` from the `Sender` header; otherwise it falls back to `From`.
 - **A send with no valid sender is refused** with an explicit message instead of leaving without a From: address.
 - A queue started before the upgrade and resumed after it falls back to GLPI's sender.
+- The entity ID is stored with new queues and used for sender resolution throughout every batch, even if the active entity changes in the browser session.
 
 ### Added
 
