@@ -24,11 +24,12 @@ final class QueueService
             array  $filter        = [],
             int    $replyToUserId = 0,
             string $fromEmail     = '',
-            string $fromName      = ''
+            string $fromName      = '',
+            ?int   $entityId       = null
         ): array {
             // From: is the explicit sender or GLPI's notification sender, never
             // the "Reply to" user. Refuse to queue a send nobody can sign.
-            $from = (new MailService())->resolveSender($fromEmail, $fromName);
+            $from = (new MailService())->resolveSender($fromEmail, $fromName, $entityId);
             if ($from['email'] === '') {
                 return ['ok' => false, 'error' => __('No valid sender email is configured in GLPI notifications.', 'mailblast')];
             }
@@ -89,6 +90,7 @@ final class QueueService
                     'filter'         => $safeFilter,
                     'from_email'     => $fromEmail,
                     'from_name'      => $fromName,
+                    'entity_id'      => $entityId,
                     'sender_rule'    => 2,
                     'reply_to_email' => $replyTo['email'],
                     'reply_to_name'  => $replyTo['name'],
@@ -116,7 +118,8 @@ final class QueueService
             array  $attachmentsB64 = [],
             int    $offset = 0,
             int    $batchSize = 15,
-            array  $inlineImagesB64 = []
+            array  $inlineImagesB64 = [],
+            ?int   $entityId = null
         ): array {
             global $DB;
     
@@ -137,6 +140,11 @@ final class QueueService
             $isRule2      = (int) ($job['sender_rule'] ?? 0) === 2;
             $fromEmail    = $isRule2 ? (string) ($job['from_email'] ?? '') : '';
             $fromName     = $isRule2 ? (string) ($job['from_name']  ?? '') : '';
+            // New queues pin their entity so a later session/entity switch cannot
+            // change the sender. Legacy queues use the active entity of the caller.
+            $queueEntityId = array_key_exists('entity_id', $job)
+                ? ($job['entity_id'] === null ? null : (int) $job['entity_id'])
+                : $entityId;
             $replyToEmail = (string) ($job['reply_to_email'] ?? '');
             $replyToName  = (string) ($job['reply_to_name']  ?? '');
             // Campaign content is intentionally supplied by the browser on every
@@ -346,7 +354,7 @@ final class QueueService
                 );
                 $err = (new MailService())->sendSymfonyEmail(
                     $transport, $toEmail, $displayName, $perSubject, $perHtml, $perPlain, $batchTempFiles, $inlineImages,
-                    $fromEmail, $fromName, $replyToEmail, $replyToName
+                    $fromEmail, $fromName, $replyToEmail, $replyToName, $queueEntityId
                 );
     
                 if ($err === null) {
