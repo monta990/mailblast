@@ -22,9 +22,6 @@ Versioning follows Semantic Versioning.
 
 - **`fromEmail` / `fromName` parameters** on `QueueService::initQueue()` and `MailService::sendMails()`, plus `MailService::resolveSender()`, so that an integration (for example an API bridge) can pass the sender it resolved for an entity. An invalid address is ignored and GLPI's sender applies; control characters are stripped from display names.
 
----
-
-
 ### Validation
 
 - Added real Symfony Mailer test coverage for MIME `From`, `Reply-To`, and `Sender` headers and the derived SMTP envelope sender.
@@ -34,6 +31,8 @@ Versioning follows Semantic Versioning.
 ### Acknowledgements
 
 - Thank you to **[@FathiBenNasr](https://github.com/FathiBenNasr)** for opening the original sender-identity PR and contributing the initial From/Reply-To separation. The contribution was retained and extended in this release.
+
+---
 
 ## [1.8.2] — 2026-10-07
 
