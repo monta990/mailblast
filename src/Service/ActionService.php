@@ -9,7 +9,13 @@ final class ActionService
     /** The GLPI entity the user is working in, for its configured sender. */
     private static function activeEntity(): ?int
     {
-        return isset($_SESSION['glpiactive_entity']) ? (int) $_SESSION['glpiactive_entity'] : null;
+        $entityId = $_SESSION['glpiactive_entity'] ?? null;
+        if (!is_int($entityId) && !(is_string($entityId) && ctype_digit($entityId))) {
+            return null;
+        }
+
+        $entityId = (int) $entityId;
+        return $entityId >= 0 ? $entityId : null;
     }
 
     public function countRecipients(string $filterType, array $filterIds): int
@@ -65,11 +71,12 @@ final class ActionService
         $sent = 0;
         $errors = [];
         $mailService = new MailService();
-        $from = $mailService->resolveSender('', '', self::activeEntity());
+        $entityId = self::activeEntity();
+        $from = $mailService->resolveSender('', '', $entityId);
         foreach ($testEmails as $email) {
             $result = $mailService->sendMails(
                 $subject, $body, $footer, $tempAttachments, true, $email, $replyToUserId,
-                $from['email'], $from['name']
+                $from['email'], $from['name'], $entityId
             );
             $sent += $result['sent'];
             $errors = array_merge($errors, $result['errors']);
@@ -124,7 +131,8 @@ final class ActionService
                 ['type' => $filterType, 'ids' => $filterIds],
                 $replyToUserId,
                 $from['email'],
-                $from['name']
+                $from['name'],
+                self::activeEntity()
             );
         } finally {
             $attachmentService->cleanupTemporaryAttachments($tempAttachments);
@@ -151,7 +159,8 @@ final class ActionService
             $attachments,
             max(0, $offset),
             (new ConfigurationService())->getBatchSize(),
-            $inlineImages
+            $inlineImages,
+            self::activeEntity()
         );
 
         $ok = empty($result['queue_error']);
