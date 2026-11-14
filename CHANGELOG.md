@@ -6,6 +6,21 @@ Versioning follows Semantic Versioning.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **The From: address is always GLPI's notification sender** (`Config::getEmailSender()`: the configured sender email, then the administrator email), for test sends and mass sends alike. Previously the administrator email was used, and a selected "Reply to" user became the From: address too: sending under a personal address through GLPI's SMTP account is rejected or flagged as spoofing by many mail servers (SPF/DMARC, sender/login mismatch). The selected user now only receives replies (Reply-To:).
+- **The envelope sender** (`smtp_sender`) is always applied, as GLPI's own mailer does.
+- **A send with no valid sender is refused** with an explicit message instead of leaving without a From: address.
+- A queue started before the upgrade and resumed after it falls back to GLPI's sender.
+
+### Added
+
+- **`fromEmail` / `fromName` parameters** on `QueueService::initQueue()` and `MailService::sendMails()`, plus `MailService::resolveSender()`, so that an integration (for example an API bridge) can pass the sender it resolved for an entity. An invalid address is ignored and GLPI's sender applies; control characters are stripped from display names.
+
+---
+
 ## [1.8.2] — 2026-10-07
 
 ### Fixed

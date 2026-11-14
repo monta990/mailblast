@@ -421,7 +421,7 @@ msgstr ""
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
 msgstr ""
 
-msgid "This send will use %s as both the From and Reply-To address."
+msgid "Replies will go to %s; the From address stays the GLPI notification sender."
 msgstr ""
 
 msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
@@ -525,4 +525,7 @@ msgid "The sending queue was not found or has expired."
 msgstr ""
 
 msgid "Unknown action."
+msgstr ""
+
+msgid "No valid sender email is configured in GLPI notifications."
 msgstr ""

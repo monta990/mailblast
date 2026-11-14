@@ -419,8 +419,8 @@ msgstr "Predeterminado (sin anulación)"
 msgid "Replies from recipients will be delivered to this mailbox instead of the send address."
 msgstr "Las respuestas de los destinatarios llegarán a este buzón en lugar de la dirección de envío."
 
-msgid "This send will use %s as both the From and Reply-To address."
-msgstr "Este envío usará %s como dirección de remitente (From) y de respuesta (Reply-To)."
+msgid "Replies will go to %s; the From address stays the GLPI notification sender."
+msgstr "Las respuestas irán a %s; el remitente (From) sigue siendo el de las notificaciones de GLPI."
 
 msgid "This send will use %s as the From address. Replies will use the default GLPI configuration."
 msgstr "Este envío usará %s como dirección de remitente (From). Las respuestas usarán la configuración predeterminada de GLPI."
@@ -526,3 +526,6 @@ msgstr "No se encontró la cola de envío o ha caducado."
 
 msgid "Unknown action."
 msgstr "Acción desconocida."
+
+msgid "No valid sender email is configured in GLPI notifications."
+msgstr "No hay una dirección de remitente válida configurada en las notificaciones de GLPI."

@@ -6,6 +6,12 @@ use UserEmail;
 
 final class ActionService
 {
+    /** The GLPI entity the user is working in, for its configured sender. */
+    private static function activeEntity(): ?int
+    {
+        return isset($_SESSION['glpiactive_entity']) ? (int) $_SESSION['glpiactive_entity'] : null;
+    }
+
     public function countRecipients(string $filterType, array $filterIds): int
     {
         $filterType = preg_replace('/[^a-z_]/', '', $filterType) ?: 'all';
@@ -59,8 +65,12 @@ final class ActionService
         $sent = 0;
         $errors = [];
         $mailService = new MailService();
+        $from = $mailService->resolveSender('', '', self::activeEntity());
         foreach ($testEmails as $email) {
-            $result = $mailService->sendMails($subject, $body, $footer, $tempAttachments, true, $email, $replyToUserId);
+            $result = $mailService->sendMails(
+                $subject, $body, $footer, $tempAttachments, true, $email, $replyToUserId,
+                $from['email'], $from['name']
+            );
             $sent += $result['sent'];
             $errors = array_merge($errors, $result['errors']);
         }
@@ -103,6 +113,8 @@ final class ActionService
             return ['ok' => false, 'error' => implode(' ', $attachmentValidation['errors'])];
         }
         $tempAttachments = $attachmentService->decodeTemporaryAttachments($attachments, 'mb_qi_');
+        // From: GLPI's notification sender for the active entity.
+        $from = (new MailService())->resolveSender('', '', self::activeEntity());
         try {
             return (new QueueService())->initQueue(
                 $subject,
@@ -110,7 +122,9 @@ final class ActionService
                 $footer,
                 $tempAttachments,
                 ['type' => $filterType, 'ids' => $filterIds],
-                $replyToUserId
+                $replyToUserId,
+                $from['email'],
+                $from['name']
             );
         } finally {
             $attachmentService->cleanupTemporaryAttachments($tempAttachments);

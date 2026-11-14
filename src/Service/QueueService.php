@@ -22,8 +22,17 @@ final class QueueService
             string $footer,
             array  $attachments,
             array  $filter        = [],
-            int    $replyToUserId = 0
+            int    $replyToUserId = 0,
+            string $fromEmail     = '',
+            string $fromName      = ''
         ): array {
+            // From: is the explicit sender or GLPI's notification sender, never
+            // the "Reply to" user. Refuse to queue a send nobody can sign.
+            $from = (new MailService())->resolveSender($fromEmail, $fromName);
+            if ($from['email'] === '') {
+                return ['ok' => false, 'error' => __('No valid sender email is configured in GLPI notifications.', 'mailblast')];
+            }
+
             // Use cryptographically secure random bytes for the job ID.
             $sendId = sprintf(
                 '%s-%s-%s-%s-%s',
@@ -56,14 +65,11 @@ final class QueueService
             $safeFilter = (($filter['type'] ?? 'all') !== 'all') ? $filter : ['type' => 'all'];
             $total      = (new RecipientService())->countActiveUsersWithEmail($safeFilter);
     
-            // Resolve "reply to" user email if requested — replies land here
-            // regardless of what From address the recipient sees. When a "Reply
-            // to" user is selected, that same mailbox is used for From: as well.
-            // If no reply-to user is selected, GLPI's default notification
-            // sender configuration (Setup > Notifications) is used unchanged.
+            // Resolve "reply to" user email if requested — replies land here,
+            // while From: stays the sender resolved above.
             $replyTo   = (new RecipientService())->resolveUserEmail($replyToUserId);
-            $fromEmail = $replyTo['email'];
-            $fromName  = $replyTo['name'];
+            $fromEmail = $from['email'];
+            $fromName  = $from['name'];
     
             // Purge stale jobs before registering the new one — prevents the new
             // job from being deleted if its created_at timestamp looks stale due to clock skew.
@@ -83,6 +89,7 @@ final class QueueService
                     'filter'         => $safeFilter,
                     'from_email'     => $fromEmail,
                     'from_name'      => $fromName,
+                    'sender_rule'    => 2,
                     'reply_to_email' => $replyTo['email'],
                     'reply_to_name'  => $replyTo['name'],
                     'payload_hash'   => $payloadHash,
@@ -125,8 +132,11 @@ final class QueueService
     
             $subject      = $job['subject'] ?? '';
             $total        = (int) ($job['total'] ?? 0);
-            $fromEmail    = (string) ($job['from_email']     ?? '');
-            $fromName     = (string) ($job['from_name']      ?? '');
+            // A queue written before sender_rule 2 stored the "Reply to" user
+            // as From: ignore it, sendSymfonyEmail() falls back to GLPI's sender.
+            $isRule2      = (int) ($job['sender_rule'] ?? 0) === 2;
+            $fromEmail    = $isRule2 ? (string) ($job['from_email'] ?? '') : '';
+            $fromName     = $isRule2 ? (string) ($job['from_name']  ?? '') : '';
             $replyToEmail = (string) ($job['reply_to_email'] ?? '');
             $replyToName  = (string) ($job['reply_to_name']  ?? '');
             // Campaign content is intentionally supplied by the browser on every

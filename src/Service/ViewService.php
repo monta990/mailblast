@@ -62,7 +62,7 @@ final class ViewService
                 'generating'=>__('Generating…','mailblast'),'cancel'=>__('Cancel','mailblast'),'sendingEmails'=>__('Sending emails','mailblast'),
                 'noActiveUsers'=>__('No active users with registered email found','mailblast'),'sending'=>__('Sending…','mailblast'),
                 'selectFilter'=>__('Select at least one item to send to specific recipients.','mailblast'),'testSent'=>__('Test sent successfully','mailblast'),
-                'testFailed'=>__('Test failed','mailblast'),'senderPreviewReply'=>__('This send will use %s as both the From and Reply-To address.','mailblast'),
+                'testFailed'=>__('Test failed','mailblast'),'senderPreviewReply'=>__('Replies will go to %s; the From address stays the GLPI notification sender.','mailblast'),
                 'senderPreviewDefault'=>__('This send will use the default GLPI configuration for both From and replies.','mailblast'),
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
