@@ -30,7 +30,7 @@ Versioning follows Semantic Versioning.
 
 ### Acknowledgements
 
-- Thank you to **[@FathiBenNasr](https://github.com/FathiBenNasr)** for opening the original sender-identity PR and contributing the initial From/Reply-To separation. The contribution was retained and extended in this release.
+- Thank to **[@FathiBenNasr](https://github.com/FathiBenNasr)** for opening the original sender-identity PR and contributing the initial From/Reply-To separation. The contribution was retained and extended in this release.
 
 ---
 
