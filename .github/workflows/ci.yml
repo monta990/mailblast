@@ -55,6 +55,17 @@ jobs:
           tools: phpunit:11.5
           coverage: none
 
+      - name: Install Symfony Mailer test dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/mailblast-test-deps"
+          composer require \
+            --working-dir="$RUNNER_TEMP/mailblast-test-deps" \
+            --no-interaction \
+            --no-progress \
+            --no-scripts \
+            "symfony/mailer:^7.2"
+          echo "GLPI_ROOT=$RUNNER_TEMP/mailblast-test-deps" >> "$GITHUB_ENV"
+
       - name: Install release validation tools
         run: |
           sudo apt-get update
