@@ -38,36 +38,50 @@ final class ContentService
 
     public function sanitizeFooter(string $footer): string
     {
-        $allowed_tags = '<b><strong><i><em><u><br><p><div><span><a>';
-        $footer = strip_tags($footer, $allowed_tags);
+        // Rebuild every allowed element instead of trying to remove dangerous
+        // attributes. This also handles unquoted attributes and malformed input.
+        $allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'a'];
+        $footer = preg_replace('~<!--.*?-->~s', '', $footer) ?? '';
 
-        $footer = preg_replace_callback(
-            '~<a\\b([^>]*)>~i',
-            static function (array $match): string {
-                $attrs = $match[1];
+        return (string) preg_replace_callback(
+            '~</?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>~s',
+            static function (array $match) use ($allowedTags): string {
+                $tag = strtolower($match[1]);
+                if (!in_array($tag, $allowedTags, true)) {
+                    return '';
+                }
 
-                if (!preg_match('~\\bhref\\s*=\\s*(["\\\'])(.*?)\\1~i', $attrs, $href)) {
+                $closing = str_starts_with($match[0], '</');
+                if ($closing) {
+                    return $tag === 'br' ? '' : '</' . $tag . '>';
+                }
+                if ($tag !== 'a') {
+                    return '<' . $tag . ($tag === 'br' ? '>' : '>');
+                }
+
+                // Accept quoted or unquoted href values, then validate the decoded URL.
+                $attributes = $match[2];
+                if (preg_match('~(?:^|\\s)href\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))~i', $attributes, $href) !== 1) {
+                    return '<a>';
+                }
+                $rawUrl = $href[1] !== '' ? $href[1] : ($href[2] !== '' ? $href[2] : ($href[3] ?? ''));
+                $url = trim(html_entity_decode($rawUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+                if (!in_array($scheme, ['http', 'https', 'mailto'], true)) {
+                    return '<a>';
+                }
+                if ($scheme !== 'mailto' && !preg_match('~^https?://~i', $url)) {
+                    return '<a>';
+                }
+                if ($scheme === 'mailto' && !preg_match('~^mailto:[^\\s]+$~i', $url)) {
                     return '<a>';
                 }
 
-                $url = trim(html_entity_decode($href[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-
-                if (!preg_match('~^(?:https?://|mailto:)~i', $url)) {
-                    return '<a>';
-                }
-
-                $safe_url = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-                return '<a href="' . $safe_url . '" rel="noopener noreferrer">';
+                return '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    . '" rel="noopener noreferrer">';
             },
             $footer
         );
-
-        // Remove event handlers and attributes that can carry executable or embedded content.
-        $footer = preg_replace('~\\s+on[a-z]+\\s*=\\s*(["\\\']).*?\\1~isu', '', $footer);
-        $footer = preg_replace('~\\s+(?:style|srcdoc)\\s*=\\s*(["\\\']).*?\\1~isu', '', $footer);
-
-        return $footer;
     }
 
     public function buildHtmlBody(string $htmlBody, string $footer): string

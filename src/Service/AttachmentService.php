@@ -47,48 +47,66 @@ final class AttachmentService
             ];
         }
 
+    /**
+     * Validate legacy multipart uploads using the same document type rules as AJAX uploads.
+     * The allowedMimes argument is retained for backward compatibility; GLPI document types
+     * are loaded directly so MIME remains optional when GLPI leaves that field blank.
+     *
+     * @param array<int, string> $allowedMimes Legacy MIME allowlist argument.
+     */
     public function validateUploadedFiles(array $files, array $allowedMimes): array
-        {
-            $accepted   = [];
-            $rejected   = [];
-            $maxBytes   = (new ConfigurationService())->getMaxAttachmentMb() * 1024 * 1024;
-            $totalBytes = 0;
-    
-            $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
-            for ($i = 0; $i < $count; $i++) {
-                $errCode = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
-                if ($errCode === UPLOAD_ERR_NO_FILE) {
-                    continue;
-                }
-                if ($errCode !== UPLOAD_ERR_OK) {
-                    $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('Upload error', 'mailblast');
-                    continue;
-                }
-    
-                $tmpPath  = (string) ($files['tmp_name'][$i] ?? '');
-                $realMime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) ?: 'application/octet-stream';
-    
-                if (!in_array($realMime, $allowedMimes, true)) {
-                    $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('File type not allowed', 'mailblast');
-                    continue;
-                }
-    
-                $fileSize    = (int) ($files['size'][$i] ?? 0);
-                $totalBytes += $fileSize;
-                if ($totalBytes > $maxBytes) {
-                    $rejected[] = (string) ($files['name'][$i] ?? '') . ': ' . __('Attachment size limit exceeded', 'mailblast');
-                    continue;
-                }
-    
-                $accepted[] = [
-                    'tmp'  => $tmpPath,
-                    'name' => (string) ($files['name'][$i] ?? 'attachment'),
-                    'mime' => $realMime,
-                ];
+    {
+        $accepted = [];
+        $rejected = [];
+        $maxBytes = (new ConfigurationService())->getMaxAttachmentMb() * 1024 * 1024;
+        $totalBytes = 0;
+
+        $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
+        for ($i = 0; $i < $count; $i++) {
+            $name = (string) ($files['name'][$i] ?? 'attachment');
+            $errCode = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+            if ($errCode === UPLOAD_ERR_NO_FILE) {
+                continue;
             }
-    
-            return ['accepted' => $accepted, 'rejected' => $rejected];
+            if ($errCode !== UPLOAD_ERR_OK) {
+                $rejected[] = $name . ': ' . __('Upload error', 'mailblast');
+                continue;
+            }
+
+            $tmpPath = (string) ($files['tmp_name'][$i] ?? '');
+            if ($tmpPath === '' || (!is_uploaded_file($tmpPath) && !is_file($tmpPath)) || !is_readable($tmpPath)) {
+                $rejected[] = $name . ': ' . __('Upload error', 'mailblast');
+                continue;
+            }
+
+            $fileSize = (int) ($files['size'][$i] ?? filesize($tmpPath));
+            $totalBytes += max(0, $fileSize);
+            if ($totalBytes > $maxBytes) {
+                $rejected[] = $name . ': ' . __('Attachment size limit exceeded', 'mailblast');
+                continue;
+            }
+
+            $bytes = file_get_contents($tmpPath);
+            if ($bytes === false || $bytes === '') {
+                $rejected[] = $name . ': ' . __('File is empty or unreadable', 'mailblast');
+                continue;
+            }
+
+            $validation = $this->validateBase64Attachments([[
+                'name' => $name,
+                'data' => base64_encode($bytes),
+            ]]);
+            if (!$validation['ok']) {
+                $rejected[] = $name . ': ' . implode(' ', $validation['errors']);
+                continue;
+            }
+
+            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) ?: 'application/octet-stream';
+            $accepted[] = ['tmp' => $tmpPath, 'name' => $name, 'mime' => $realMime];
         }
+
+        return ['accepted' => $accepted, 'rejected' => $rejected];
+    }
 
     /**
      * Converts GLPI document-backed and data-URI images into inline CID data.
@@ -196,8 +214,28 @@ final class AttachmentService
     public function validateBase64Attachments(array $attachments): array
     {
         $allowedTypes = $this->getAllowedDocumentTypes();
-        $allowed = array_values(array_filter(array_map('strval', $allowedTypes['mimes'] ?? [])));
-        $allowedExts = array_values(array_filter(array_map(static fn(array $type): string => strtolower((string) ($type['ext'] ?? '')), $allowedTypes['types'] ?? [])));
+        $allowedRules = [];
+        foreach (($allowedTypes['types'] ?? []) as $type) {
+            if (!is_array($type)) {
+                continue;
+            }
+
+            $extensionRule = trim((string) ($type['ext'] ?? ''));
+            if ($extensionRule === '') {
+                continue;
+            }
+
+            $mimeValue = strtolower(trim((string) ($type['mime'] ?? '')));
+            $mimes = $mimeValue === ''
+                ? []
+                : array_values(array_filter(array_map('trim', preg_split('/[,;]+/', $mimeValue) ?: [])));
+
+            $allowedRules[] = [
+                'extension' => $extensionRule,
+                'mimes' => $mimes,
+            ];
+        }
+
         $maxBytes = (new ConfigurationService())->getMaxAttachmentMb() * 1024 * 1024;
         $totalBytes = 0;
         $errors = [];
@@ -207,32 +245,94 @@ final class AttachmentService
                 $errors[] = sprintf(__('Attachment %d is invalid.', 'mailblast'), $index + 1);
                 continue;
             }
+
             $data = (string) ($attachment['data'] ?? '');
             $name = basename(trim((string) ($attachment['name'] ?? 'attachment')));
             if ($data === '') {
                 $errors[] = sprintf(__('Attachment %s is empty or invalid.', 'mailblast'), $name ?: ($index + 1));
                 continue;
             }
+
             $bytes = base64_decode($data, true);
             if ($bytes === false || $bytes === '') {
                 $errors[] = sprintf(__('Attachment %s contains invalid data.', 'mailblast'), $name ?: ($index + 1));
                 continue;
             }
-            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) ?: 'application/octet-stream';
-            $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-            $mimeAllowed = $allowed !== [] && in_array($realMime, $allowed, true);
-            $extensionAllowed = $extension !== '' && in_array($extension, $allowedExts, true);
-            if (($allowed !== [] || $allowedExts !== []) && !$mimeAllowed && !$extensionAllowed) {
-                $errors[] = sprintf(__('File type not allowed by GLPI: %s (%s).', 'mailblast'), $name ?: ($index + 1), $realMime);
+
+            $realMime = strtolower(trim((new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) ?: 'application/octet-stream'));
+            $matchingRules = [];
+            foreach ($allowedRules as $rule) {
+                if ($this->matchesDocumentTypeExtension($name, $rule['extension'])) {
+                    $matchingRules[] = $rule;
+                }
+            }
+
+            if ($matchingRules === []) {
+                $errors[] = sprintf(__('File extension not allowed by GLPI: %s.', 'mailblast'), $name ?: ($index + 1));
                 continue;
             }
+
+            // GLPI's MIME field is optional. When it is configured, enforce it
+            // against the actual bytes; when it is blank, GLPI authorizes by the
+            // configured extension rule, which may also be a regular expression.
+            $mimeIsUnrestricted = false;
+            $mimeMatches = false;
+            foreach ($matchingRules as $rule) {
+                if ($rule['mimes'] === []) {
+                    $mimeIsUnrestricted = true;
+                    continue;
+                }
+                if (in_array($realMime, $rule['mimes'], true)) {
+                    $mimeMatches = true;
+                }
+            }
+
+            if (!$mimeIsUnrestricted && !$mimeMatches) {
+                $errors[] = sprintf(__('File MIME type not allowed by GLPI: %s (%s).', 'mailblast'), $name ?: ($index + 1), $realMime);
+                continue;
+            }
+
             $totalBytes += strlen($bytes);
             if ($totalBytes > $maxBytes) {
                 $errors[] = __('Combined attachment size limit exceeded.', 'mailblast');
                 break;
             }
         }
+
         return ['ok' => $errors === [], 'errors' => $errors];
+    }
+
+    /**
+     * Match a filename against a GLPI document type extension rule.
+     * GLPI supports both plain extensions and slash-delimited regular expressions.
+     */
+    private function matchesDocumentTypeExtension(string $filename, string $extensionRule): bool
+    {
+        $filename = basename($filename);
+        $extensionRule = trim($extensionRule);
+        if ($filename === '' || $extensionRule === '') {
+            return false;
+        }
+
+        if (preg_match('/^\/.+\/[a-z]*$/i', $extensionRule) === 1) {
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            if ($extension === '') {
+                return false;
+            }
+            $lastDelimiter = strrpos($extensionRule, '/');
+            $flags = substr($extensionRule, $lastDelimiter + 1);
+            if (!str_contains($flags, 'i')) {
+                $extensionRule .= 'i';
+            }
+            return @preg_match($extensionRule, $extension) === 1;
+        }
+
+        $extension = strtolower(ltrim($extensionRule, '.'));
+        if ($extension === '') {
+            return false;
+        }
+
+        return str_ends_with(strtolower($filename), '.' . $extension);
     }
 
     /**
@@ -254,9 +354,10 @@ final class AttachmentService
                 $errors[] = sprintf(__('Inline image %d contains invalid data.', 'mailblast'), $index + 1);
                 continue;
             }
-            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) ?: 'application/octet-stream';
-            if (!str_starts_with($realMime, 'image/')) {
-                $errors[] = sprintf(__('Inline image %d is not a valid image.', 'mailblast'), $index + 1);
+            $realMime = strtolower((new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) ?: 'application/octet-stream');
+            // SVG is active XML and may execute script in some mail clients/viewers.
+            if (!in_array($realMime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'], true)) {
+                $errors[] = sprintf(__('Inline image %d is not a supported safe raster image.', 'mailblast'), $index + 1);
             }
         }
         return ['ok' => $errors === [], 'errors' => $errors];
