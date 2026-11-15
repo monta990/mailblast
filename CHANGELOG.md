@@ -6,9 +6,11 @@ Versioning follows Semantic Versioning.
 
 ---
 
-## [Unreleased]
+## [1.8.3] — 2026-11-15
 
-## [1.8.3] — 2026-11-14
+### Fixed
+
+- **Campaign initialization on GLPI 11/12** — corrected the maximum-user-ID query to use GLPI's supported aggregate query-builder syntax. The previous expression was quoted as a literal column name (`MAX(id)`) and caused MySQL error 1054 before a campaign could start.
 
 ### Changed
 
@@ -27,6 +29,24 @@ Versioning follows Semantic Versioning.
 - Added real Symfony Mailer test coverage for MIME `From`, `Reply-To`, and `Sender` headers and the derived SMTP envelope sender.
 - CI now installs Symfony Mailer only in the runner's temporary test environment; no third-party runtime dependency is bundled with the plugin.
 - Verified PHP 8.2–8.6, GLPI 11 and GLPI 12 compatibility checks, PSR-4 mapping, translation catalogs, and the installation ZIP build.
+
+### Security
+
+- Rebuilt footer HTML from a strict element allowlist, discarding all supplied attributes except validated HTTP(S)/mailto links. Unquoted event handlers and other attributes can no longer survive sanitization.
+- Attachment validation follows GLPI's uploadable document-type rules, including regular-expression extension rules. GLPI's MIME field is optional; when a MIME is configured, the plugin verifies it against the actual file content and rejects mismatches instead of trusting the filename.
+- Inline images are restricted to validated raster formats; SVG and other active/XML image formats are rejected.
+
+### Queue reliability
+
+- Added database advisory locks to serialize per-campaign batch processing across PHP workers sharing the GLPI database.
+- **GLPI database API compatibility** — advisory locks now execute through the supported `$DB->doQuery()` method; the removed/unsupported `$DB->query()` call caused campaign sends to fail before the first recipient was processed. Lock names are restricted to safe characters, and acquisition/release failures are logged.
+- Added sequential batch validation and an in-flight marker to reject replayed or out-of-order batch requests. A request that terminates after marking a batch in-flight leaves the queue blocked rather than silently resending that batch.
+- Replaced offset-based recipient pagination with an ID cursor and a campaign-start upper ID bound, preventing row shifts when users are disabled or changed during a campaign and excluding users created after campaign initialization.
+- Empty recipient selections now return without persisting an orphan queue. Campaigns remain independently addressable, while each campaign batch is serialized by its own database advisory lock.
+
+### Local validation
+
+- Added attachment regression checks for PDF with an explicit MIME, extension-only document types with a blank MIME, regex-based extension rules, MIME/content mismatches, and unlisted extensions. Local PHP syntax and security regression checks performed on the installable package. These changes remain local to the 1.8.3 test package and have not been published to GitHub or independently validated against a live GLPI database/SMTP environment.
 
 ### Acknowledgements
 

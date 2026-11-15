@@ -70,6 +70,20 @@ final class QueueService
     
             $safeFilter = (($filter['type'] ?? 'all') !== 'all') ? $filter : ['type' => 'all'];
             $total      = (new RecipientService())->countActiveUsersWithEmail($safeFilter);
+            if ($total <= 0) {
+                return [
+                    'ok'                => true,
+                    'send_id'           => '',
+                    'total'             => 0,
+                    'html'              => $fullHtml,
+                    'plain'             => $plainText,
+                    'attachments_b64'   => $attachmentsB64,
+                    'inline_images_b64' => $inlineResult['inlineImages'],
+                ];
+            }
+
+            global $DB;
+            $maxUserId = self::getMaxUserId($DB);
     
             // Resolve "reply to" user email if requested — replies land here,
             // while From: stays the sender resolved above.
@@ -77,18 +91,22 @@ final class QueueService
             $fromEmail = $from['email'];
             $fromName  = $from['name'];
     
-            // Purge stale jobs before registering the new one — prevents the new
-            // job from being deleted if its created_at timestamp looks stale due to clock skew.
+            // Purge old queue metadata before creating the new job.
+            // There is no global single-campaign flag: each queue has its own
+            // advisory lock and may be processed independently.
             static $cleanupDone = false;
             if (!$cleanupDone) {
                 (new ConfigurationService())->cleanupStaleJobs();
                 $cleanupDone = true;
             }
-    
+
             Config::setConfigurationValues(ConfigurationService::CONFIG_CONTEXT, [
                 'queue_' . $sendId => json_encode([
                     'subject'        => $subject,
                     'total'          => $total,
+                    'max_user_id'    => $maxUserId,
+                    'last_user_id'   => 0,
+                    'next_offset'    => 0,
                     'created_at'     => time(),
                     'prev_sent'      => 0,
                     'prev_errors'    => 0,
@@ -127,6 +145,13 @@ final class QueueService
             ?int   $entityId = null
         ): array {
             global $DB;
+
+            $batchLock = self::acquireBatchLock($DB, $sendId);
+            if ($batchLock === null) {
+                return ['sent' => 0, 'errors' => 0, 'next_offset' => $offset, 'done' => false,
+                    'error_list' => [__('This campaign batch is already being processed. Please wait.', 'mailblast')],
+                    'sent_list' => [], 'queue_error' => true];
+            }
     
             $cfg = Config::getConfigurationValues(ConfigurationService::CONFIG_CONTEXT, ['queue_' . $sendId]);
             $raw = $cfg['queue_' . $sendId] ?? '';
@@ -136,6 +161,12 @@ final class QueueService
                 return ['sent' => 0, 'errors' => 0, 'next_offset' => $offset,
                         'done' => true, 'error_list' => [__('The sending queue was not found or has expired.', 'mailblast')],
                         'sent_list' => [], 'queue_error' => true];
+            }
+            $expectedOffset = (int) ($job['next_offset'] ?? 0);
+            if ($offset !== $expectedOffset || isset($job['processing_offset'])) {
+                return ['sent' => 0, 'errors' => 0, 'next_offset' => $expectedOffset, 'done' => false,
+                    'error_list' => [__('This batch was already processed or is not the next campaign batch. Restart the campaign if its state is inconsistent.', 'mailblast')],
+                    'sent_list' => [], 'queue_error' => true];
             }
     
             $subject      = $job['subject'] ?? '';
@@ -263,14 +294,17 @@ final class QueueService
             }
     
             $needsDedup = ($filterType === 'entities' || $filterType === 'profiles') && !empty($filterIds);
+            $lastUserId = (int) ($job['last_user_id'] ?? 0);
+            $maxUserId = (int) ($job['max_user_id'] ?? PHP_INT_MAX);
+            $qWhere[] = ['u.id' => ['>', $lastUserId]];
+            $qWhere[] = ['u.id' => ['<=', $maxUserId]];
             $qSpec = [
-                'SELECT'    => ['ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
+                'SELECT'    => ['u.id', 'ue.email', 'u.firstname', 'u.realname', 'u.name AS login'],
                 'FROM'      => 'glpi_useremails AS ue',
                 'LEFT JOIN' => $qJoin,
                 'WHERE'     => $qWhere,
                 'ORDER'     => ['u.id ASC'],
                 'LIMIT'     => $batchSize,
-                'START'     => $offset,
             ];
             if ($needsDedup) {
                 $qSpec['GROUPBY'] = ['u.id'];
@@ -334,8 +368,16 @@ final class QueueService
                         'error_list' => [$e->getMessage()], 'sent_list' => [], 'queue_error' => true];
             }
     
+            $job['processing_offset'] = $offset;
+            $job['processing_started_at'] = time();
+            Config::setConfigurationValues(ConfigurationService::CONFIG_CONTEXT, [
+                'queue_' . $sendId => json_encode($job),
+            ]);
+
+            $lastProcessedUserId = $lastUserId;
             try {
             foreach ($iterator as $row) {
+                $lastProcessedUserId = max($lastProcessedUserId, (int) ($row['id'] ?? 0));
                 $displayName = trim($row['firstname'] . ' ' . $row['realname']);
                 if ($displayName === '') $displayName = $row['login'];
     
@@ -398,11 +440,12 @@ final class QueueService
                 }
             }
     
-            $nextOffset = $offset + $batchSize;
+            $returnedRows = $iterator->count();
+            $nextOffset = $offset + $returnedRows;
             // Use actual row count returned as the authoritative signal — if fewer
             // rows came back than requested, we are at the end regardless of $total.
             // This handles users being activated/deactivated mid-send gracefully.
-            $done = ($iterator->count() < $batchSize);
+            $done = ($returnedRows < $batchSize);
             // Also stop if we've passed the originally stored total (safety cap).
             if (!$done && $total > 0 && $nextOffset >= $total) $done = true;
     
@@ -415,8 +458,12 @@ final class QueueService
             if (!$done) {
                 Config::setConfigurationValues(ConfigurationService::CONFIG_CONTEXT, [
                     'queue_' . $sendId => json_encode(array_merge($job, [
-                        'prev_sent'   => $runSent,
-                        'prev_errors' => $runErrors,
+                        'prev_sent'       => $runSent,
+                        'prev_errors'     => $runErrors,
+                        'last_user_id'    => $lastProcessedUserId,
+                        'next_offset'     => $nextOffset,
+                        'processing_offset' => null,
+                        'processing_started_at' => null,
                     ])),
                 ]);
             }
@@ -436,6 +483,92 @@ final class QueueService
                 'sent_list'   => $sentList,
             ];
         }
+
+    /**
+     * Return the current highest user ID to keep campaign pagination bounded.
+     *
+     * The aggregate function must be expressed using GLPI's query-builder
+     * aggregate syntax. Passing "MAX(id)" as a regular SELECT field makes the
+     * builder quote it as a column name (\`MAX(id)\`) and breaks queue creation.
+     */
+    private static function getMaxUserId($db): int
+    {
+        $rows = $db->request([
+            'SELECT' => ['MAX' => 'id AS max_id'],
+            'FROM'   => 'glpi_users',
+        ]);
+
+        foreach ($rows as $row) {
+            return max(0, (int) ($row['max_id'] ?? 0));
+        }
+
+        return 0;
+    }
+
+    private static function acquireNamedLock($db, string $name): ?object
+    {
+        // Lock names are generated internally (campaign constant or SHA-256
+        // digest). Restrict them to a conservative alphabet before embedding
+        // the value in the SQL string. GLPI's DB object intentionally does not
+        // expose query(); doQuery() is the supported low-level escape hatch for
+        // this MySQL advisory-lock operation, which has no query-builder form.
+        $lockName = substr((string) preg_replace('/[^A-Za-z0-9_]/', '', $name), 0, 64);
+        if ($lockName === '') {
+            return null;
+        }
+
+        try {
+            $result = $db->doQuery("SELECT GET_LOCK('{$lockName}', 0) AS acquired");
+            if ($result === false || $result === true) {
+                return null;
+            }
+            $row = $db->fetchAssoc($result);
+        } catch (\Throwable $e) {
+            \Toolbox::logInFile(
+                'mailblast',
+                sprintf("Could not acquire campaign advisory lock %s: %s\n", $lockName, $e->getMessage()),
+                true
+            );
+            return null;
+        }
+
+        if ((int) ($row['acquired'] ?? 0) !== 1) {
+            return null;
+        }
+
+        return new class($db, $lockName) {
+            private $db;
+            private string $lockName;
+
+            public function __construct($db, string $lockName)
+            {
+                $this->db = $db;
+                $this->lockName = $lockName;
+            }
+
+            public function __destruct()
+            {
+                try {
+                    $this->db->doQuery("SELECT RELEASE_LOCK('{$this->lockName}')");
+                } catch (\Throwable $e) {
+                    \Toolbox::logInFile(
+                        'mailblast',
+                        sprintf("Could not release campaign advisory lock %s: %s\n", $this->lockName, $e->getMessage()),
+                        true
+                    );
+                }
+            }
+        };
+    }
+
+    /**
+     * Serialize processing for a campaign across PHP workers and web nodes sharing
+     * the same GLPI database. MySQL releases the advisory lock if the connection dies.
+     */
+    private static function acquireBatchLock($db, string $sendId): ?object
+    {
+        return self::acquireNamedLock($db, 'mailblast_batch_' . substr(hash('sha256', $sendId), 0, 44));
+    }
 
     private static function payloadHash(string $html, string $plain, array $attachments, array $inlineImages): string
     {
