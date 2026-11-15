@@ -44,9 +44,9 @@ Versioning follows Semantic Versioning.
 - Replaced offset-based recipient pagination with an ID cursor and a campaign-start upper ID bound, preventing row shifts when users are disabled or changed during a campaign and excluding users created after campaign initialization.
 - Empty recipient selections now return without persisting an orphan queue. Campaigns remain independently addressable, while each campaign batch is serialized by its own database advisory lock.
 
-### Local validation
+### Additional regression validation
 
-- Added attachment regression checks for PDF with an explicit MIME, extension-only document types with a blank MIME, regex-based extension rules, MIME/content mismatches, and unlisted extensions. Local PHP syntax and security regression checks performed on the installable package. These changes remain local to the 1.8.3 test package and have not been published to GitHub or independently validated against a live GLPI database/SMTP environment.
+- Ran attachment regression checks for PDF with an explicit MIME, extension-only document types with a blank MIME, regex-based extension rules, MIME/content mismatches, and unlisted extensions. The merged 1.8.3 release passed the repository CI package checks on PHP 8.2–8.6 and the post-merge security workflow. Live GLPI database and SMTP integration should still be verified in the target installation.
 
 ### Acknowledgements
 
