@@ -75,7 +75,7 @@ jobs:
       - name: Prepare plugin analysis workspace
         run: |
           mkdir -p glpi/plugins/mailblast
-          cp -a setup.php hook.php src templates locales js plugin.xml glpi/plugins/mailblast/
+          cp -a setup.php hook.php src templates locales js public plugin.xml glpi/plugins/mailblast/
 
       - name: Verify GLPI API compatibility
         run: php tests/validate-glpi.php "$GITHUB_WORKSPACE/glpi" "$GITHUB_WORKSPACE/glpi/plugins/mailblast"
