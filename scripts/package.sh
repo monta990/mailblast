@@ -7,7 +7,7 @@ if [[ -z "$OUTPUT_DIR" ]]; then
     OUTPUT_DIR="$ROOT/dist"
 fi
 VERSION="$(sed -n "s/.*PLUGIN_MAILBLAST_VERSION', *'\\([^']*\\)'.*/\\1/p" "$ROOT/setup.php" | head -n 1)"
-if [[ ! "$VERSION" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Could not read a valid plugin version from setup.php: '$VERSION'" >&2
     exit 1
 fi
@@ -19,7 +19,7 @@ trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/mailblast"
 
 # Explicit allow-list: CI, tests and packaging helpers can never leak into releases.
-for item in setup.php hook.php plugin.xml LICENSE README.md CHANGELOG.md logo.png user.png config.png src templates locales js public; do
+for item in setup.php hook.php plugin.xml LICENSE README.md CHANGELOG.md logo.png user.png config.png src templates locales public; do
     if [[ ! -e "$ROOT/$item" ]]; then
         echo "Required release item is missing: $item" >&2
         exit 1
@@ -33,7 +33,6 @@ for required in \
     src/Service/QueueService.php \
     templates/send.html.twig \
     locales/es_MX.mo \
-    js/mailblast_send.js \
     public/js/mailblast_editor.js \
     public/js/mailblast_send.js; do
     if [[ ! -f "$STAGE/mailblast/$required" ]]; then
@@ -58,7 +57,6 @@ for required in \
     mailblast/src/Service/QueueService.php \
     mailblast/templates/send.html.twig \
     mailblast/locales/es_MX.mo \
-    mailblast/js/mailblast_send.js \
     mailblast/public/js/mailblast_editor.js \
     mailblast/public/js/mailblast_send.js; do
     if ! unzip -Z1 "$ARCHIVE" | grep -Fqx "$required"; then
@@ -66,5 +64,10 @@ for required in \
         exit 1
     fi
 done
+
+if unzip -Z1 "$ARCHIVE" | grep -Eq '^mailblast/js(/|$)'; then
+    echo "The generated ZIP still contains the obsolete mailblast/js/ directory." >&2
+    exit 1
+fi
 
 echo "Created and validated $ARCHIVE"
