@@ -7,8 +7,6 @@
 
 namespace GlpiPlugin\Mailblast\Service;
 
-use GlpiPlugin\Mailblast\Service\ConfigurationService;
-
 final class AttachmentService
 {
     public function getAllowedDocumentTypes(): array
@@ -46,67 +44,6 @@ final class AttachmentService
                 'types'  => $types,
             ];
         }
-
-    /**
-     * Validate legacy multipart uploads using the same document type rules as AJAX uploads.
-     * The allowedMimes argument is retained for backward compatibility; GLPI document types
-     * are loaded directly so MIME remains optional when GLPI leaves that field blank.
-     *
-     * @param array<int, string> $allowedMimes Legacy MIME allowlist argument.
-     */
-    public function validateUploadedFiles(array $files, array $allowedMimes): array
-    {
-        $accepted = [];
-        $rejected = [];
-        $maxBytes = (new ConfigurationService())->getMaxAttachmentMb() * 1024 * 1024;
-        $totalBytes = 0;
-
-        $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
-        for ($i = 0; $i < $count; $i++) {
-            $name = (string) ($files['name'][$i] ?? 'attachment');
-            $errCode = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
-            if ($errCode === UPLOAD_ERR_NO_FILE) {
-                continue;
-            }
-            if ($errCode !== UPLOAD_ERR_OK) {
-                $rejected[] = $name . ': ' . __('Upload error', 'mailblast');
-                continue;
-            }
-
-            $tmpPath = (string) ($files['tmp_name'][$i] ?? '');
-            if ($tmpPath === '' || (!is_uploaded_file($tmpPath) && !is_file($tmpPath)) || !is_readable($tmpPath)) {
-                $rejected[] = $name . ': ' . __('Upload error', 'mailblast');
-                continue;
-            }
-
-            $fileSize = (int) ($files['size'][$i] ?? filesize($tmpPath));
-            $totalBytes += max(0, $fileSize);
-            if ($totalBytes > $maxBytes) {
-                $rejected[] = $name . ': ' . __('Attachment size limit exceeded', 'mailblast');
-                continue;
-            }
-
-            $bytes = file_get_contents($tmpPath);
-            if ($bytes === false || $bytes === '') {
-                $rejected[] = $name . ': ' . __('File is empty or unreadable', 'mailblast');
-                continue;
-            }
-
-            $validation = $this->validateBase64Attachments([[
-                'name' => $name,
-                'data' => base64_encode($bytes),
-            ]]);
-            if (!$validation['ok']) {
-                $rejected[] = $name . ': ' . implode(' ', $validation['errors']);
-                continue;
-            }
-
-            $realMime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) ?: 'application/octet-stream';
-            $accepted[] = ['tmp' => $tmpPath, 'name' => $name, 'mime' => $realMime];
-        }
-
-        return ['accepted' => $accepted, 'rejected' => $rejected];
-    }
 
     /**
      * Converts GLPI document-backed and data-URI images into inline CID data.
