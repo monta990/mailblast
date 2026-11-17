@@ -142,7 +142,8 @@ $pluginFiles = [
     'src/Service/MailService.php', 'src/Service/QueueService.php',
     'src/Service/RecipientService.php', 'src/Service/ReportService.php',
     'src/Service/ViewService.php', 'templates/config.html.twig',
-    'templates/send.html.twig',
+    'templates/send.html.twig', 'public/js/mailblast_editor.js',
+    'public/js/mailblast_send.js',
 ];
 foreach ($pluginFiles as $relative) {
     if (!is_file(rtrim($pluginRoot, DIRECTORY_SEPARATOR) . '/' . $relative)) {
