@@ -89,7 +89,10 @@ jobs:
           find setup.php hook.php src tests scripts .github -type f -name '*.php' -print0 | sort -z | xargs -0 -r -n1 php -l
 
       - name: Check first-party JavaScript syntax
-        run: node --check js/mailblast_send.js
+        run: |
+          node --check js/mailblast_send.js
+          node --check public/js/mailblast_editor.js
+          node --check public/js/mailblast_send.js
 
       - name: Validate PSR-4 namespace and class mapping
         run: php tests/check-psr4.php src 'GlpiPlugin\Mailblast'
@@ -134,6 +137,8 @@ jobs:
           unzip -Z1 "$archive" | grep -qx 'mailblast/templates/send.html.twig'
           unzip -Z1 "$archive" | grep -qx 'mailblast/locales/es_MX.mo'
           unzip -Z1 "$archive" | grep -qx 'mailblast/js/mailblast_send.js'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/public/js/mailblast_editor.js'
+          unzip -Z1 "$archive" | grep -qx 'mailblast/public/js/mailblast_send.js'
 
           # Pass the exact archive produced by the packager to the upload step.
           # Do not duplicate the plugin version in this workflow.
