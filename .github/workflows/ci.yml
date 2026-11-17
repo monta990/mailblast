@@ -90,7 +90,6 @@ jobs:
 
       - name: Check first-party JavaScript syntax
         run: |
-          node --check js/mailblast_send.js
           node --check public/js/mailblast_editor.js
           node --check public/js/mailblast_send.js
 
@@ -136,9 +135,12 @@ jobs:
           unzip -Z1 "$archive" | grep -qx 'mailblast/src/Service/QueueService.php'
           unzip -Z1 "$archive" | grep -qx 'mailblast/templates/send.html.twig'
           unzip -Z1 "$archive" | grep -qx 'mailblast/locales/es_MX.mo'
-          unzip -Z1 "$archive" | grep -qx 'mailblast/js/mailblast_send.js'
           unzip -Z1 "$archive" | grep -qx 'mailblast/public/js/mailblast_editor.js'
           unzip -Z1 "$archive" | grep -qx 'mailblast/public/js/mailblast_send.js'
+          if unzip -Z1 "$archive" | grep -Eq '^mailblast/js(/|$)'; then
+            echo "Obsolete mailblast/js/ assets must not be included in the installation ZIP." >&2
+            exit 1
+          fi
 
           # Pass the exact archive produced by the packager to the upload step.
           # Do not duplicate the plugin version in this workflow.
