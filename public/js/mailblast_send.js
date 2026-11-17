@@ -15,6 +15,30 @@
   window.mbConfig = cfg;
   const i18n = cfg.i18n || {};
 
+  // Read visible editor text without regex-based HTML stripping. TinyMCE is
+  // preferred; the inert DOMParser fallback also handles a missing editor.
+  function hasBodyText(textarea) {
+    if (!textarea) return false;
+
+    var text = '';
+    if (window.tinymce && typeof window.tinymce.get === 'function' && textarea.id) {
+      var editor = window.tinymce.get(textarea.id);
+      if (editor) {
+        text = editor.getContent({ format: 'text' }) || '';
+      }
+    }
+
+    if (!text) {
+      var parsed = new DOMParser().parseFromString(String(textarea.value || ''), 'text/html');
+      parsed.querySelectorAll('script, style, noscript, template').forEach(function (node) {
+        node.remove();
+      });
+      text = parsed.body ? parsed.body.textContent || '' : '';
+    }
+
+    return String(text).replace(/\u00a0/g, ' ').trim().length > 0;
+  }
+
   // expose for TinyMCE scriptBlock scope
   window._mbMaxAttMb = cfg.maxAttMb || 15;
   window._mbI18n     = i18n;
@@ -330,16 +354,7 @@
       el.style.display = '';
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-    function hideFormAlert() { var el = $('mb_formAlert'); if (el) el.style.display = 'none'; }
-
-    // Check whether rich-text content contains visible text without sanitizing HTML
-    // with a regular expression or inserting untrusted markup into the live document.
-    function hasBodyText(value) {
-      var template = document.createElement('template');
-      template.innerHTML = String(value || '');
-      var text = (template.content.textContent || '').replace(/\\u00a0/g, ' ').trim();
-      return text.length > 0;
-    }
+    function hideFormAlert() { var el = $$('mb_formAlert'); if (el) el.style.display = 'none'; }
 
     function setStatus(msg, type) {
       var sl = $$('mb_statusLine');
@@ -678,8 +693,7 @@
         if (!subjectEl || !subjectEl.value.trim()) { showFormAlert(i18n.subjectRequired || 'Subject is required'); return; }
         if (typeof tinymce !== 'undefined') { try { tinymce.triggerSave(); } catch(e) {} }
         var bodyEl   = document.querySelector('textarea[name="body"]');
-        var bodyText = bodyEl ? bodyEl.value : '';
-        if (!hasBodyText(bodyText)) { hideFormAlert(); showFormAlert(i18n.bodyRequired || 'Body is required'); return; }
+        if (!hasBodyText(bodyEl)) { hideFormAlert(); showFormAlert(i18n.bodyRequired || 'Body is required'); return; }
         hideFormAlert();
         if (!_confirmModal) _confirmModal = new bootstrap.Modal($$('mb_confirmModal'));
         _confirmModal.show();
@@ -809,9 +823,7 @@
 
           var bodyEl   = document.querySelector('textarea[name="body"]');
           var footerEl = document.querySelector('textarea[name="footer"]');
-          var bodyVal  = bodyEl ? bodyEl.value : '';
-
-          if (!hasBodyText(bodyVal)) {
+          if (!hasBodyText(bodyEl)) {
             btn.disabled  = false;
             btn.innerHTML = origHTML;
             mbShowResult(false, i18n.bodyRequired || 'Body is required');
