@@ -662,7 +662,7 @@
         if (!subjectEl || !subjectEl.value.trim()) { showFormAlert(i18n.subjectRequired || 'Subject is required'); return; }
         if (typeof tinymce !== 'undefined') { try { tinymce.triggerSave(); } catch(e) {} }
         var bodyEl   = document.querySelector('textarea[name="body"]');
-        var bodyText = bodyEl ? bodyEl.value.replace(/<[^>]*>/g, '').trim() : '';
+        var bodyText = bodyEl ? bodyEl.value.replace(/<|>/g, '').trim() : '';
         if (!bodyText) { hideFormAlert(); showFormAlert(i18n.bodyRequired || 'Body is required'); return; }
         hideFormAlert();
         if (!_confirmModal) _confirmModal = new bootstrap.Modal($$('mb_confirmModal'));
@@ -793,7 +793,7 @@
 
           var bodyEl   = document.querySelector('textarea[name="body"]');
           var footerEl = document.querySelector('textarea[name="footer"]');
-          var bodyVal  = bodyEl ? bodyEl.value.replace(/<[^>]*>/g, '').trim() : '';
+          var bodyVal  = bodyEl ? bodyEl.value.replace(/<|>/g, '').trim() : '';
 
           if (!bodyVal) {
             btn.disabled  = false;
