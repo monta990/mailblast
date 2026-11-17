@@ -111,6 +111,7 @@ jobs:
           done
 
       - name: Build and validate the actual installation ZIP
+        id: package
         run: |
           set -euo pipefail
           bash scripts/package.sh "$RUNNER_TEMP/mailblast-dist"
@@ -122,7 +123,8 @@ jobs:
             echo "The archive contains a path outside mailblast/." >&2
             exit 1
           fi
-          if unzip -Z1 "$archive" | grep -Eq '^mailblast/(tests|scripts|\.github|vendor)(/|$)|^mailblast/(phpunit\.xml|composer\.(json|lock))$'; then
+          if unzip -Z1 "$archive" | grep -Eq '^mailblast/(tests|scripts|\.github|vendor)(/|$)|^mailblast/(phpunit\.xml|composer\.(json|lock))
+; then
             echo "Development-only files leaked into the installation ZIP." >&2
             exit 1
           fi
@@ -134,10 +136,14 @@ jobs:
           unzip -Z1 "$archive" | grep -qx 'mailblast/locales/es_MX.mo'
           unzip -Z1 "$archive" | grep -qx 'mailblast/js/mailblast_send.js'
 
+          # Pass the exact archive produced by the packager to the upload step.
+          # Do not duplicate the plugin version in this workflow.
+          printf 'archive_path=%s\\n' "$archive" >> "$GITHUB_OUTPUT"
+
       - name: Upload installable Mail Blast ZIP
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: mailblast-1.8.4-installation-zip
-          path: ${{ runner.temp }}/mailblast-dist/mailblast-1.8.4.zip
+          name: mailblast-installation-zip
+          path: ${{ steps.package.outputs.archive_path }}
           if-no-files-found: error
           retention-days: 14
