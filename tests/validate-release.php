@@ -76,6 +76,7 @@ $requiredRuntimeFiles = [
     'src/Service/RecipientService.php', 'src/Service/ReportService.php',
     'src/Service/ViewService.php', 'templates/config.html.twig',
     'templates/send.html.twig', 'js/mailblast_send.js',
+    'public/js/mailblast_editor.js', 'public/js/mailblast_send.js',
 ];
 foreach ($requiredRuntimeFiles as $path) {
     $read($path);
