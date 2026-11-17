@@ -15,7 +15,7 @@ trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/mailblast"
 
 # Explicit allow-list: CI, tests and packaging helpers can never leak into releases.
-for item in setup.php hook.php plugin.xml LICENSE README.md CHANGELOG.md logo.png user.png config.png src templates locales js; do
+for item in setup.php hook.php plugin.xml LICENSE README.md CHANGELOG.md logo.png user.png config.png src templates locales js public; do
     if [[ ! -e "$ROOT/$item" ]]; then
         echo "Required release item is missing: $item" >&2
         exit 1
