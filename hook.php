@@ -35,5 +35,25 @@ function plugin_mailblast_uninstall(): bool
         $DB->delete('glpi_configs', ['context' => 'plugin:mailblast']);
     }
 
+    // Remove the version-check cache created outside glpi_configs. Never recurse:
+    // preserve any unrelated files that an administrator may have placed there.
+    $pluginDataRoot = defined('GLPI_PLUGIN_DOC_DIR')
+        ? GLPI_PLUGIN_DOC_DIR
+        : (defined('GLPI_VAR_DIR') ? GLPI_VAR_DIR . '/_plugins' : sys_get_temp_dir());
+    $pluginDataDir = rtrim($pluginDataRoot, DIRECTORY_SEPARATOR)
+        . DIRECTORY_SEPARATOR . 'mailblast';
+    $versionCache = $pluginDataDir . DIRECTORY_SEPARATOR . 'version-check.json';
+
+    if (is_file($versionCache) || is_link($versionCache)) {
+        @unlink($versionCache);
+    }
+
+    if (is_dir($pluginDataDir) && !is_link($pluginDataDir)) {
+        $entries = @scandir($pluginDataDir);
+        if (is_array($entries) && array_diff($entries, ['.', '..']) === []) {
+            @rmdir($pluginDataDir);
+        }
+    }
+
     return true;
 }

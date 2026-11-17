@@ -1,7 +1,10 @@
 {% extends "layout/page_skeleton.html.twig" %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid" id="mb-send-page"
+     data-mb-config="{{ runtime_config_json }}"
+     data-mb-body-id="{{ mb_body_id }}"
+     data-mb-image-limit-message="{{ image_limit_message }}">
   <div class="card mb-4">
 
     <div class="card-header d-flex align-items-center">
@@ -431,6 +434,8 @@
 }
 </style>
 
-{{ runtime_script | raw }}
+<script src="{{ editor_config_url }}" defer></script>
+<script src="{{ js_path('plugins/mailblast/js/mailblast_editor.js', {'version': plugin_version}) }}" defer></script>
+<script src="{{ js_path('plugins/mailblast/js/mailblast_send.js', {'version': plugin_version}) }}" defer></script>
 
 {% endblock content %}

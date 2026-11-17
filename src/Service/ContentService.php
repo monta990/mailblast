@@ -38,14 +38,18 @@ final class ContentService
 
     public function sanitizeFooter(string $footer): string
     {
-        // Rebuild every allowed element instead of trying to remove dangerous
-        // attributes. This also handles unquoted attributes and malformed input.
+        // Recognized tags are rebuilt from scratch. Any '<' that is not part of
+        // a complete recognized tag is escaped afterwards, including the start
+        // of malformed/unterminated tags. Placeholders keep rebuilt markup
+        // separate from attacker-controlled text during that final escaping pass.
         $allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'span', 'a'];
         $footer = preg_replace('~<!--.*?-->~s', '', $footer) ?? '';
+        $placeholderPrefix = 'MAILBLASTFOOTER_' . bin2hex(random_bytes(16)) . '_';
+        $rebuiltTags = [];
 
-        return (string) preg_replace_callback(
+        $sanitized = (string) preg_replace_callback(
             '~</?([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>~s',
-            static function (array $match) use ($allowedTags): string {
+            static function (array $match) use ($allowedTags, $placeholderPrefix, &$rebuiltTags): string {
                 $tag = strtolower($match[1]);
                 if (!in_array($tag, $allowedTags, true)) {
                     return '';
@@ -53,35 +57,48 @@ final class ContentService
 
                 $closing = str_starts_with($match[0], '</');
                 if ($closing) {
-                    return $tag === 'br' ? '' : '</' . $tag . '>';
-                }
-                if ($tag !== 'a') {
-                    return '<' . $tag . ($tag === 'br' ? '>' : '>');
+                    $rebuilt = $tag === 'br' ? '' : '</' . $tag . '>';
+                } elseif ($tag !== 'a') {
+                    $rebuilt = '<' . $tag . '>';
+                } else {
+                    // Accept quoted or unquoted href values, then validate the decoded URL.
+                    $attributes = $match[2];
+                    if (preg_match('~(?:^|\s)href\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))~i', $attributes, $href) !== 1) {
+                        $rebuilt = '<a>';
+                    } else {
+                        $rawUrl = $href[1] ?? '';
+                        if ($rawUrl === '') {
+                            $rawUrl = $href[2] ?? '';
+                        }
+                        if ($rawUrl === '') {
+                            $rawUrl = $href[3] ?? '';
+                        }
+                        $url = trim(html_entity_decode($rawUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+                        $validHttp = in_array($scheme, ['http', 'https'], true)
+                            && preg_match('~^https?://[^\s]+$~i', $url) === 1;
+                        $validMailto = $scheme === 'mailto'
+                            && preg_match('~^mailto:[^\s]+$~i', $url) === 1;
+
+                        $rebuilt = ($validHttp || $validMailto)
+                            ? '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                                . '" rel="noopener noreferrer">'
+                            : '<a>';
+                    }
                 }
 
-                // Accept quoted or unquoted href values, then validate the decoded URL.
-                $attributes = $match[2];
-                if (preg_match('~(?:^|\\s)href\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))~i', $attributes, $href) !== 1) {
-                    return '<a>';
-                }
-                $rawUrl = $href[1] !== '' ? $href[1] : ($href[2] !== '' ? $href[2] : ($href[3] ?? ''));
-                $url = trim(html_entity_decode($rawUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-                $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-                if (!in_array($scheme, ['http', 'https', 'mailto'], true)) {
-                    return '<a>';
-                }
-                if ($scheme !== 'mailto' && !preg_match('~^https?://~i', $url)) {
-                    return '<a>';
-                }
-                if ($scheme === 'mailto' && !preg_match('~^mailto:[^\\s]+$~i', $url)) {
-                    return '<a>';
-                }
-
-                return '<a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                    . '" rel="noopener noreferrer">';
+                $placeholder = $placeholderPrefix . count($rebuiltTags) . '_END';
+                $rebuiltTags[$placeholder] = $rebuilt;
+                return $placeholder;
             },
             $footer
         );
+
+        // This is the critical malformed-input guard: a '<' not consumed by a
+        // complete matched tag cannot become markup when Twig renders the value.
+        $sanitized = str_replace('<', '&lt;', $sanitized);
+
+        return $rebuiltTags === [] ? $sanitized : strtr($sanitized, $rebuiltTags);
     }
 
     public function buildHtmlBody(string $htmlBody, string $footer): string

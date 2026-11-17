@@ -163,10 +163,35 @@ final class QueueService
                         'sent_list' => [], 'queue_error' => true];
             }
             $expectedOffset = (int) ($job['next_offset'] ?? 0);
-            if ($offset !== $expectedOffset || isset($job['processing_offset'])) {
+            if ($offset !== $expectedOffset) {
                 return ['sent' => 0, 'errors' => 0, 'next_offset' => $expectedOffset, 'done' => false,
-                    'error_list' => [__('This batch was already processed or is not the next campaign batch. Restart the campaign if its state is inconsistent.', 'mailblast')],
+                    'error_list' => [__('This batch was already processed or is not the next campaign batch.', 'mailblast')],
                     'sent_list' => [], 'queue_error' => true];
+            }
+
+            if (isset($job['processing_offset'])) {
+                if (!self::isProcessingMarkerStale($job)) {
+                    return ['sent' => 0, 'errors' => 0, 'next_offset' => $expectedOffset, 'done' => false,
+                        'error_list' => [__('This campaign batch is still being processed. Please wait.', 'mailblast')],
+                        'sent_list' => [], 'queue_error' => true];
+                }
+
+                // The per-campaign advisory lock was acquired above. A live worker
+                // holding the same lock cannot be running concurrently. Clear the
+                // abandoned marker so the browser can retry the interrupted batch.
+                // SMTP cannot reveal which recipients may already have received a
+                // message before the previous worker died; that retry can duplicate
+                // delivery for that interrupted batch, so record this explicitly.
+                \Toolbox::logInFile(
+                    'mailblast',
+                    sprintf("Recovering stale batch marker for campaign %s at offset %d; retry may duplicate messages already accepted by SMTP.\n", $sendId, $expectedOffset),
+                    true
+                );
+                $job['processing_offset'] = null;
+                $job['processing_started_at'] = null;
+                Config::setConfigurationValues(ConfigurationService::CONFIG_CONTEXT, [
+                    'queue_' . $sendId => json_encode($job),
+                ]);
             }
     
             $subject      = $job['subject'] ?? '';
@@ -491,6 +516,25 @@ final class QueueService
      * aggregate syntax. Passing "MAX(id)" as a regular SELECT field makes the
      * builder quote it as a column name (\`MAX(id)\`) and breaks queue creation.
      */
+    private const PROCESSING_MARKER_STALE_AFTER = 900;
+
+    /**
+     * A marker older than 15 minutes is abandoned once the campaign lock is free.
+     * The lock acquisition happens before this check, so another active worker
+     * cannot be mistaken for a stale one while it still owns the advisory lock.
+     *
+     * @param array<string, mixed> $job
+     */
+    private static function isProcessingMarkerStale(array $job, ?int $now = null): bool
+    {
+        $startedAt = (int) ($job['processing_started_at'] ?? 0);
+        $currentTime = $now ?? time();
+
+        return $startedAt > 0
+            && $currentTime >= $startedAt
+            && ($currentTime - $startedAt) >= self::PROCESSING_MARKER_STALE_AFTER;
+    }
+
     private static function getMaxUserId($db): int
     {
         $rows = $db->request([

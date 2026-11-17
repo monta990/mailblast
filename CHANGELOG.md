@@ -6,6 +6,18 @@ Versioning follows Semantic Versioning.
 
 ---
 
+## [1.8.4] — 2026-11-17
+
+### Fixed
+
+- Includes the stored-footer XSS hardening, CSP-compatible external JavaScript assets, permission-checked TinyMCE configuration endpoint, stale queue recovery safeguards, and uninstall cache cleanup.
+- Footer sanitization now escapes every unmatched `<` after rebuilding complete allowlisted tags, preventing unterminated event-handler tags from becoming markup when the template closes its container.
+- Replaced plugin-generated inline runtime and TinyMCE customization scripts with escaped runtime data attributes and same-origin external JavaScript assets. GLPI's TinyMCE bootstrap is served through a permission-checked, non-cacheable JavaScript route.
+- Removed the unreferenced legacy multipart-file validator that accepted arbitrary local file paths.
+- Abandoned campaign batch markers can be recovered after 15 minutes once the campaign advisory lock is available; recovery is logged because retrying an interrupted SMTP batch can duplicate deliveries already accepted before a worker failed.
+- Uninstall removes the version-check cache and only removes its data directory when empty.
+
+
 ## [1.8.3] — 2026-11-15
 
 ### Fixed
@@ -40,7 +52,7 @@ Versioning follows Semantic Versioning.
 
 - Added database advisory locks to serialize per-campaign batch processing across PHP workers sharing the GLPI database.
 - **GLPI database API compatibility** — advisory locks now execute through the supported `$DB->doQuery()` method; the removed/unsupported `$DB->query()` call caused campaign sends to fail before the first recipient was processed. Lock names are restricted to safe characters, and acquisition/release failures are logged.
-- Added sequential batch validation and an in-flight marker to reject replayed or out-of-order batch requests. A request that terminates after marking a batch in-flight leaves the queue blocked rather than silently resending that batch.
+- Added sequential batch validation and an in-flight marker to reject replayed or out-of-order batch requests. If a worker terminates after marking a batch in-flight, the same batch remains blocked while its advisory lock is held; after the lock is released and the marker is at least 15 minutes old, a retry can recover it. Because SMTP cannot report which messages were accepted before a crash, recovering an interrupted batch may duplicate delivery for some recipients and is logged.
 - Replaced offset-based recipient pagination with an ID cursor and a campaign-start upper ID bound, preventing row shifts when users are disabled or changed during a campaign and excluding users created after campaign initialization.
 - Empty recipient selections now return without persisting an orphan queue. Campaigns remain independently addressable, while each campaign batch is serialized by its own database advisory lock.
 

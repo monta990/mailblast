@@ -33,8 +33,80 @@ final class MailBlastController extends AbstractController
         return $this->render('@mailblast/send.html.twig', $viewService->getSendViewData(
             $this->generatePluginUrl('mailblast_action', $request),
             $this->generatePluginUrl('mailblast_configuration', $request),
-            $this->generatePluginUrl('mailblast_report', $request)
+            $this->generatePluginUrl('mailblast_report', $request),
+            $this->generatePluginUrl('mailblast_editor_config', $request)
         ));
+    }
+
+    #[Route('/EditorConfig', name: 'mailblast_editor_config', methods: 'GET')]
+    #[SecurityStrategy(Firewall::STRATEGY_AUTHENTICATED)]
+    public function editorConfig(Request $request): Response
+    {
+        Session::checkRight('config', UPDATE);
+
+        $bodyId = (string) $request->query->get('body_id', '');
+        if (preg_match('/^mb_body_[a-f0-9]{12}$/D', $bodyId) !== 1) {
+            return new Response('', Response::HTTP_BAD_REQUEST, [
+                'Content-Type' => 'application/javascript; charset=UTF-8',
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        // Ask GLPI to build the editor configuration, but serve its JavaScript as
+        // an authenticated same-origin resource instead of inlining a script block.
+        $editorMarkup = \Html::initEditorSystem(
+            $bodyId,
+            substr($bodyId, -12),
+            false,
+            false,
+            true,
+            200,
+            [],
+            'top',
+            false,
+            '',
+            true,
+            false,
+            '',
+            false,
+            ['link']
+        );
+
+        if (!is_string($editorMarkup) || $editorMarkup === '') {
+            return new Response('', Response::HTTP_INTERNAL_SERVER_ERROR, [
+                'Content-Type' => 'application/javascript; charset=UTF-8',
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        $previousLibxmlState = libxml_use_internal_errors(true);
+        try {
+            $document = new \DOMDocument();
+            $loaded = $document->loadHTML(
+                '<?xml encoding="UTF-8">' . $editorMarkup,
+                LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING
+            );
+            $scriptNodes = $loaded ? $document->getElementsByTagName('script') : null;
+            if ($scriptNodes === null || $scriptNodes->length !== 1) {
+                return new Response('', Response::HTTP_INTERNAL_SERVER_ERROR, [
+                    'Content-Type' => 'application/javascript; charset=UTF-8',
+                    'Cache-Control' => 'private, no-store, max-age=0',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
+            }
+            $scriptSource = $scriptNodes->item(0)?->textContent ?? '';
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousLibxmlState);
+        }
+
+        return new Response($scriptSource, Response::HTTP_OK, [
+            'Content-Type' => 'application/javascript; charset=UTF-8',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     #[Route('/Configuration', name: 'mailblast_configuration', methods: ['GET', 'POST'])]
