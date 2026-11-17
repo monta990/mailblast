@@ -125,11 +125,12 @@ if (!is_file($autoloadFile)) {
         $expectedRouteNames = [
             'mailblast_action',
             'mailblast_configuration',
+            'mailblast_editor_config',
             'mailblast_report',
             'mailblast_send',
         ];
-        if ($routeCount !== 4 || $securityCount !== 4 || $routeNames !== $expectedRouteNames) {
-            $errors[] = "Expected 4 protected Mail Blast routes; found {$routeCount} routes, {$securityCount} security attributes, and names: " . implode(', ', array_map('strval', $routeNames));
+        if ($routeCount !== 5 || $securityCount !== 5 || $routeNames !== $expectedRouteNames) {
+            $errors[] = "Expected 5 protected Mail Blast routes; found {$routeCount} routes, {$securityCount} security attributes, and names: " . implode(', ', array_map('strval', $routeNames));
         }
     }
 }
