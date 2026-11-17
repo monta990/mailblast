@@ -330,7 +330,16 @@
       el.style.display = '';
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-    function hideFormAlert() { var el = $$('mb_formAlert'); if (el) el.style.display = 'none'; }
+    function hideFormAlert() { var el = $('mb_formAlert'); if (el) el.style.display = 'none'; }
+
+    // Check whether rich-text content contains visible text without sanitizing HTML
+    // with a regular expression or inserting untrusted markup into the live document.
+    function hasBodyText(value) {
+      var template = document.createElement('template');
+      template.innerHTML = String(value || '');
+      var text = (template.content.textContent || '').replace(/\\u00a0/g, ' ').trim();
+      return text.length > 0;
+    }
 
     function setStatus(msg, type) {
       var sl = $$('mb_statusLine');
@@ -669,8 +678,8 @@
         if (!subjectEl || !subjectEl.value.trim()) { showFormAlert(i18n.subjectRequired || 'Subject is required'); return; }
         if (typeof tinymce !== 'undefined') { try { tinymce.triggerSave(); } catch(e) {} }
         var bodyEl   = document.querySelector('textarea[name="body"]');
-        var bodyText = bodyEl ? bodyEl.value.replace(/<[^>]*>/g, '').trim() : '';
-        if (!bodyText) { hideFormAlert(); showFormAlert(i18n.bodyRequired || 'Body is required'); return; }
+        var bodyText = bodyEl ? bodyEl.value : '';
+        if (!hasBodyText(bodyText)) { hideFormAlert(); showFormAlert(i18n.bodyRequired || 'Body is required'); return; }
         hideFormAlert();
         if (!_confirmModal) _confirmModal = new bootstrap.Modal($$('mb_confirmModal'));
         _confirmModal.show();
@@ -800,9 +809,9 @@
 
           var bodyEl   = document.querySelector('textarea[name="body"]');
           var footerEl = document.querySelector('textarea[name="footer"]');
-          var bodyVal  = bodyEl ? bodyEl.value.replace(/<[^>]*>/g, '').trim() : '';
+          var bodyVal  = bodyEl ? bodyEl.value : '';
 
-          if (!bodyVal) {
+          if (!hasBodyText(bodyVal)) {
             btn.disabled  = false;
             btn.innerHTML = origHTML;
             mbShowResult(false, i18n.bodyRequired || 'Body is required');
