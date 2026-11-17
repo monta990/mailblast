@@ -123,8 +123,7 @@ jobs:
             echo "The archive contains a path outside mailblast/." >&2
             exit 1
           fi
-          if unzip -Z1 "$archive" | grep -Eq '^mailblast/(tests|scripts|\.github|vendor)(/|$)|^mailblast/(phpunit\.xml|composer\.(json|lock))
-; then
+          if unzip -Z1 "$archive" | grep -Eq '^mailblast/(tests|scripts|vendor)/|^mailblast/[.]github/|^mailblast/(phpunit[.]xml|composer[.](json|lock))$'; then
             echo "Development-only files leaked into the installation ZIP." >&2
             exit 1
           fi
@@ -138,7 +137,7 @@ jobs:
 
           # Pass the exact archive produced by the packager to the upload step.
           # Do not duplicate the plugin version in this workflow.
-          printf 'archive_path=%s\\n' "$archive" >> "$GITHUB_OUTPUT"
+          printf 'archive_path=%s\n' "$archive" >> "$GITHUB_OUTPUT"
 
       - name: Upload installable Mail Blast ZIP
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
