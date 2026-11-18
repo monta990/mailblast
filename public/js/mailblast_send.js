@@ -15,8 +15,8 @@
   window.mbConfig = cfg;
   const i18n = cfg.i18n || {};
 
-  // Read visible editor text without regex-based HTML stripping. TinyMCE is
-  // preferred; the inert DOMParser fallback also handles a missing editor.
+  // Read the editor's text representation only. Never reinterpret editor
+  // content as HTML in the page DOM.
   function hasBodyText(textarea) {
     if (!textarea) return false;
 
@@ -29,11 +29,8 @@
     }
 
     if (!text) {
-      var parsed = new DOMParser().parseFromString(String(textarea.value || ''), 'text/html');
-      parsed.querySelectorAll('script, style, noscript, template').forEach(function (node) {
-        node.remove();
-      });
-      text = parsed.body ? parsed.body.textContent || '' : '';
+      // Plain-text fallback for when TinyMCE is not initialized yet.
+      text = String(textarea.value || '');
     }
 
     return String(text).replace(/\u00a0/g, ' ').trim().length > 0;
